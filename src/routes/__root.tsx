@@ -16,6 +16,8 @@ import { AdminModeProvider } from "../lib/admin-mode";
 import { AuthProvider } from "../lib/auth";
 import { Toaster } from "../components/ui/sonner";
 import { OverlayCleaner } from "../components/shop/OverlayCleaner";
+import { BrandingProvider } from "../lib/branding-provider";
+import { RegionProvider } from "../lib/currency";
 
 
 function NotFoundComponent() {
@@ -143,6 +145,8 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <BrandingProvider>
+        <RegionProvider>
         <CartProvider>
           <AdminModeProvider>
             {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
@@ -151,6 +155,8 @@ function RootComponent() {
             <OverlayCleaner />
           </AdminModeProvider>
         </CartProvider>
+        </RegionProvider>
+        </BrandingProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

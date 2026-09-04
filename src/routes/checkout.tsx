@@ -10,6 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCart } from "@/lib/cart";
+import { useQuery } from "@tanstack/react-query";
+import { captureLocation, createOrder } from "@/lib/orders";
+import { fetchPaymentAccounts, PROVIDERS, rotateAccount } from "@/lib/payments";
+import { recordWalletPayment } from "@/lib/admin.functions";
 import { FREE_SHIPPING_THRESHOLD, WHATSAPP_NUMBER, formatPKR } from "@/lib/shop";
 
 export const Route = createFileRoute("/checkout")({
@@ -41,11 +45,19 @@ function CheckoutPage() {
   const ordered = items.filter((item) => item.selected);
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [method, setMethod] = useState<string>("cod");
+  const [placing, setPlacing] = useState(false);
+  const { data: accounts } = useQuery({
+    queryKey: ["payment-accounts"],
+    queryFn: fetchPaymentAccounts,
+    staleTime: 5 * 60_000,
+  });
+  const account = accounts && method !== "cod" ? rotateAccount(accounts, method) : null;
 
   const shipping = selectedTotal >= FREE_SHIPPING_THRESHOLD || selectedTotal === 0 ? 0 : 200;
   const grandTotal = selectedTotal + shipping;
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     const parsed = schema.safeParse(form);
     if (!parsed.success) {
       const next: Record<string, string> = {};
@@ -58,6 +70,46 @@ function CheckoutPage() {
       return;
     }
     setErrors({});
+    setPlacing(true);
+
+    // Automatic GPS capture so the delivery rider gets an exact drop pin.
+    const location = await captureLocation(6000);
+
+    let orderCode = "";
+    try {
+      const order = await createOrder({
+        customerName: parsed.data.name,
+        customerPhone: parsed.data.phone,
+        address: parsed.data.address,
+        subtotal: selectedTotal,
+        shipping,
+        total: grandTotal,
+        paymentMethod: method,
+        location,
+        items: ordered.map((item) => ({
+          productId: item.productId,
+          name: item.name,
+          variant: item.variant ?? null,
+          image: item.image ?? null,
+          unitPrice: item.price,
+          quantity: item.quantity,
+        })),
+      });
+      orderCode = order.order_code;
+
+      if (account) {
+        await recordWalletPayment({
+          data: {
+            account_id: account.id,
+            order_id: order.id,
+            amount: grandTotal,
+            note: `Order ${order.order_code}`,
+          },
+        });
+      }
+    } catch {
+      toast.error("Could not save the order, sending it on WhatsApp instead.");
+    }
 
     const lines = ordered.map(
       (item, index) =>
@@ -66,6 +118,7 @@ function CheckoutPage() {
 
     const message = [
       "*NEW ORDER — AURA VIBE*",
+      orderCode ? `Order: ${orderCode}` : "",
       "",
       "*Items*",
       ...lines,
@@ -74,16 +127,23 @@ function CheckoutPage() {
       `Delivery: ${shipping === 0 ? "FREE" : formatPKR(shipping)}`,
       `*Total: ${formatPKR(grandTotal)}*`,
       "",
+      `Payment: ${PROVIDERS.find((p) => p.value === method)?.label ?? method}`,
+      account ? `Paid to: ${account.account_title} — ${account.account_number}` : "",
+      "",
       "*Customer*",
       `Name: ${parsed.data.name}`,
       `Phone: ${parsed.data.phone}`,
       `Address: ${parsed.data.address}`,
-    ].join("\n");
+      location ? `Location: https://maps.google.com/?q=${location.latitude},${location.longitude}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank", "noopener,noreferrer");
     clear();
-    toast.success("Order sent on WhatsApp!");
+    setPlacing(false);
+    toast.success("Order placed!");
     navigate({ to: "/" });
   };
 
@@ -169,6 +229,39 @@ function CheckoutPage() {
       </section>
 
       <section className="mx-3 mt-3 rounded-2xl bg-card p-4 card-shadow">
+        <h2 className="mb-2 text-sm font-bold">Payment method</h2>
+        <div className="grid grid-cols-2 gap-2">
+          {PROVIDERS.map((provider) => (
+            <button
+              key={provider.value}
+              type="button"
+              onClick={() => setMethod(provider.value)}
+              className={`rounded-xl border px-3 py-2 text-left text-xs font-semibold ${
+                method === provider.value
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-card"
+              }`}
+            >
+              <span className="mr-1">{provider.icon}</span>
+              {provider.label}
+            </button>
+          ))}
+        </div>
+        {account ? (
+          <div className="mt-2 rounded-xl bg-muted/60 px-3 py-2 text-[11px]">
+            <p className="font-bold">{account.account_title}</p>
+            <p className="text-muted-foreground">
+              {account.bank_name ? `${account.bank_name} · ` : ""}
+              {account.account_number}
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              Send the total to this account and share the screenshot on WhatsApp.
+            </p>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="mx-3 mt-3 rounded-2xl bg-card p-4 card-shadow">
         <h2 className="mb-2 text-sm font-bold">Order summary ({ordered.length})</h2>
         {ordered.length === 0 ? (
           <p className="text-xs text-muted-foreground">
@@ -227,11 +320,12 @@ function CheckoutPage() {
           </div>
           <button
             type="button"
-            onClick={placeOrder}
+            disabled={placing}
+            onClick={() => void placeOrder()}
             className="flex flex-1 items-center justify-center gap-2 rounded-full bg-hot px-4 py-3 text-sm font-extrabold text-deal-foreground"
           >
             <MessageCircle className="size-5" />
-            Submit order ({ordered.length})
+            {placing ? "Placing…" : `Submit order (${ordered.length})`}
           </button>
         </div>
       </div>

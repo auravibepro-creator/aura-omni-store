@@ -203,6 +203,51 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_accounts: {
+        Row: {
+          account_number: string
+          account_title: string
+          bank_name: string | null
+          created_at: string
+          id: string
+          instructions: string
+          is_active: boolean
+          last_used_at: string | null
+          provider: string
+          sort_order: number
+          updated_at: string
+          use_count: number
+        }
+        Insert: {
+          account_number?: string
+          account_title?: string
+          bank_name?: string | null
+          created_at?: string
+          id?: string
+          instructions?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          provider?: string
+          sort_order?: number
+          updated_at?: string
+          use_count?: number
+        }
+        Update: {
+          account_number?: string
+          account_title?: string
+          bank_name?: string | null
+          created_at?: string
+          id?: string
+          instructions?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          provider?: string
+          sort_order?: number
+          updated_at?: string
+          use_count?: number
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category_id: string | null
@@ -359,6 +404,92 @@ export type Database = {
         }
         Relationships: []
       }
+      support_agents: {
+        Row: {
+          active_load: number
+          capacity: number
+          channels: string[]
+          created_at: string
+          id: string
+          is_online: boolean
+          name: string
+          phone: string | null
+          sort_order: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          active_load?: number
+          capacity?: number
+          channels?: string[]
+          created_at?: string
+          id?: string
+          is_online?: boolean
+          name?: string
+          phone?: string | null
+          sort_order?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          active_load?: number
+          capacity?: number
+          channels?: string[]
+          created_at?: string
+          id?: string
+          is_online?: boolean
+          name?: string
+          phone?: string | null
+          sort_order?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      support_threads: {
+        Row: {
+          agent_id: string | null
+          channel: string
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          message: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          channel?: string
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          id?: string
+          message?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          channel?: string
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          id?: string
+          message?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_threads_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "support_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tabs: {
         Row: {
           commission_percent: number
@@ -444,6 +575,54 @@ export type Database = {
             columns: ["tab_id"]
             isOneToOne: false
             referencedRelation: "tabs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_ledger: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string
+          currency: string
+          direction: string
+          id: string
+          note: string
+          order_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          currency?: string
+          direction?: string
+          id?: string
+          note?: string
+          order_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          currency?: string
+          direction?: string
+          id?: string
+          note?: string
+          order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_ledger_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "payment_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_ledger_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]

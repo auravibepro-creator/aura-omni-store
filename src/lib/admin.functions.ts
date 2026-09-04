@@ -367,3 +367,211 @@ export const adminSaveOverlaySettings = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true as const };
   });
+
+/* ---------- White-label branding, gift box and social links ---------- */
+
+const settingKeyShape = z.enum(["branding", "gift_box", "social"]);
+
+export const adminGetSetting = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => passwordShape.extend({ key: settingKeyShape }).parse(data))
+  .handler(async ({ data }) => {
+    assertPassword(data.password);
+    const db = await admin();
+    const { data: row, error } = await db
+      .from("site_settings")
+      .select("value")
+      .eq("key", data.key)
+      .maybeSingle();
+    if (error) throw error;
+    return { value: (row as { value?: unknown } | null)?.value ?? null };
+  });
+
+export const adminSaveSetting = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    passwordShape
+      .extend({ key: settingKeyShape, value: z.record(z.string(), z.unknown()) })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    assertPassword(data.password);
+    const db = await admin();
+    const { error } = await db.from("site_settings").upsert({
+      key: data.key,
+      value: data.value as never,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+    return { ok: true as const };
+  });
+
+/* ---------- Payment accounts, rotation and wallet ledger ---------- */
+
+const accountShape = z.object({
+  id: z.string().uuid().optional(),
+  provider: z.enum(["jazzcash", "easypaisa", "bank"]),
+  account_title: z.string().trim().min(1).max(120),
+  account_number: z.string().trim().min(3).max(60),
+  bank_name: z.string().trim().max(80).nullable().default(null),
+  instructions: z.string().trim().max(400).default(""),
+  is_active: z.boolean().default(true),
+  sort_order: z.number().int().min(0).max(999).default(0),
+});
+
+export const adminListWallets = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => passwordShape.parse(data))
+  .handler(async ({ data }) => {
+    assertPassword(data.password);
+    const db = await admin();
+    const [accounts, ledger, orders] = await Promise.all([
+      db.from("payment_accounts").select("*").order("sort_order", { ascending: true }),
+      db.from("wallet_ledger").select("*").order("created_at", { ascending: false }).limit(200),
+      db
+        .from("orders")
+        .select("id,order_code,total,payment_method,status,created_at,commission_amount")
+        .order("created_at", { ascending: false })
+        .limit(200),
+    ]);
+    return {
+      accounts: accounts.data ?? [],
+      ledger: ledger.data ?? [],
+      orders: orders.data ?? [],
+    };
+  });
+
+export const adminSaveAccount = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => passwordShape.extend({ account: accountShape }).parse(data))
+  .handler(async ({ data }) => {
+    assertPassword(data.password);
+    const db = await admin();
+    const { id, ...fields } = data.account;
+    const { error } = id
+      ? await db.from("payment_accounts").update(fields).eq("id", id)
+      : await db.from("payment_accounts").insert(fields);
+    if (error) throw error;
+    return { ok: true as const };
+  });
+
+export const adminDeleteAccount = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => passwordShape.extend({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    assertPassword(data.password);
+    const db = await admin();
+    const { error } = await db.from("payment_accounts").delete().eq("id", data.id);
+    if (error) throw error;
+    return { ok: true as const };
+  });
+
+/* ---------- Support desk: agents and routing queue ---------- */
+
+const agentShape = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().trim().min(1).max(80),
+  phone: z.string().trim().max(30).nullable().default(null),
+  channels: z.array(z.enum(["chat", "call"])).min(1).default(["chat", "call"]),
+  is_online: z.boolean().default(true),
+  capacity: z.number().int().min(1).max(50).default(5),
+  sort_order: z.number().int().min(0).max(999).default(0),
+});
+
+export const adminListSupport = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => passwordShape.parse(data))
+  .handler(async ({ data }) => {
+    assertPassword(data.password);
+    const db = await admin();
+    const [agents, threads] = await Promise.all([
+      db.from("support_agents").select("*").order("sort_order", { ascending: true }),
+      db.from("support_threads").select("*").order("created_at", { ascending: false }).limit(100),
+    ]);
+    return { agents: agents.data ?? [], threads: threads.data ?? [] };
+  });
+
+export const adminSaveAgent = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => passwordShape.extend({ agent: agentShape }).parse(data))
+  .handler(async ({ data }) => {
+    assertPassword(data.password);
+    const db = await admin();
+    const { id, ...fields } = data.agent;
+    const { error } = id
+      ? await db.from("support_agents").update(fields).eq("id", id)
+      : await db.from("support_agents").insert(fields);
+    if (error) throw error;
+    return { ok: true as const };
+  });
+
+export const adminDeleteAgent = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => passwordShape.extend({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    assertPassword(data.password);
+    const db = await admin();
+    const { error } = await db.from("support_agents").delete().eq("id", data.id);
+    if (error) throw error;
+    return { ok: true as const };
+  });
+
+export const adminCloseThread = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => passwordShape.extend({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    assertPassword(data.password);
+    const db = await admin();
+    const { data: thread } = await db
+      .from("support_threads")
+      .select("agent_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    const { error } = await db
+      .from("support_threads")
+      .update({ status: "closed" })
+      .eq("id", data.id);
+    if (error) throw error;
+    const agentId = (thread as { agent_id?: string | null } | null)?.agent_id;
+    if (agentId) {
+      const { data: agent } = await db
+        .from("support_agents")
+        .select("active_load")
+        .eq("id", agentId)
+        .maybeSingle();
+      const load = Number((agent as { active_load?: number } | null)?.active_load ?? 0);
+      await db
+        .from("support_agents")
+        .update({ active_load: Math.max(0, load - 1) })
+        .eq("id", agentId);
+    }
+    return { ok: true as const };
+  });
+
+/** Records a payment against a rotated wallet account (marks it as used). */
+export const recordWalletPayment = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        account_id: z.string().uuid(),
+        order_id: z.string().uuid().nullable().default(null),
+        amount: z.number().min(0).max(100_000_000),
+        note: z.string().trim().max(200).default(""),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: account } = await db
+      .from("payment_accounts")
+      .select("use_count")
+      .eq("id", data.account_id)
+      .maybeSingle();
+    await db
+      .from("payment_accounts")
+      .update({
+        use_count: Number((account as { use_count?: number } | null)?.use_count ?? 0) + 1,
+        last_used_at: new Date().toISOString(),
+      })
+      .eq("id", data.account_id);
+    const { error } = await db.from("wallet_ledger").insert({
+      account_id: data.account_id,
+      order_id: data.order_id,
+      amount: data.amount,
+      direction: "in",
+      note: data.note,
+    });
+    if (error) throw error;
+    return { ok: true as const };
+  });
