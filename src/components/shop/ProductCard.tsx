@@ -1,3 +1,4 @@
+import { useRegion } from "@/lib/currency";
 import { Link } from "@tanstack/react-router";
 import { Star, Pencil } from "lucide-react";
 
