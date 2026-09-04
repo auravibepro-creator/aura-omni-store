@@ -9,6 +9,8 @@ import { CategoryTabs } from "@/components/shop/CategoryTabs";
 import { IncentivesBanner } from "@/components/shop/IncentivesBanner";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SocialBar } from "@/components/shop/SocialBar";
+import { SupportWidget } from "@/components/shop/SupportWidget";
 import { RewardBox } from "@/components/shop/RewardBox";
 import { fetchCategories, fetchProducts, fetchTabs } from "@/lib/shop";
 

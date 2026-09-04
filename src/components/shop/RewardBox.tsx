@@ -1,14 +1,18 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Gift, Sparkles, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DEFAULT_GIFT_BOX, fetchGiftBox } from "@/lib/branding";
 
 const SEEN_KEY = "auravibe-reward-seen";
 
-/** Launch animation: a 3D rotating reward box that reveals a welcome coupon. */
+/** Launch animation: a 3D rotating reward box that reveals the admin's welcome coupon. */
 export function RewardBox() {
   const [open, setOpen] = useState(false);
   const [opened, setOpened] = useState(false);
+  const { data } = useQuery({ queryKey: ["gift-box"], queryFn: fetchGiftBox, staleTime: 5 * 60_000 });
+  const gift = data ?? DEFAULT_GIFT_BOX;
 
   useEffect(() => {
     let seen = true;
@@ -31,7 +35,7 @@ export function RewardBox() {
     }
   }
 
-  if (!open) return null;
+  if (!open || !gift.enabled) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/70 px-6 backdrop-blur-sm">
@@ -59,8 +63,8 @@ export function RewardBox() {
             ].map((transform) => (
               <span
                 key={transform}
-                style={{ transform }}
-                className="absolute inset-0 flex items-center justify-center rounded-lg deal-gradient text-deal-foreground opacity-95"
+                style={{ transform, background: gift.box_color }}
+                className="absolute inset-0 flex items-center justify-center rounded-lg text-deal-foreground opacity-95"
               >
                 <Gift className="size-7" />
               </span>
@@ -70,10 +74,15 @@ export function RewardBox() {
 
         {opened ? (
           <>
-            <h2 className="font-display text-xl font-bold text-deal">You unlocked Rs. 300 off</h2>
+            <h2 className="font-display text-xl font-bold text-deal">{gift.reward_title}</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Use code <span className="font-bold text-foreground">AURA300</span> at WhatsApp
-              checkout on orders over Rs. 2,500.
+              {gift.subtitle}
+              {gift.code ? (
+                <>
+                  {" "}
+                  Code: <span className="font-bold text-foreground">{gift.code}</span>
+                </>
+              ) : null}
             </p>
             <Button className="mt-4 w-full brand-gradient text-primary-foreground" onClick={close}>
               Start shopping
@@ -81,15 +90,16 @@ export function RewardBox() {
           </>
         ) : (
           <>
-            <h2 className="font-display text-lg font-bold">Your welcome reward</h2>
+            <h2 className="font-display text-lg font-bold">{gift.title}</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               Tap the box to reveal today&apos;s surprise discount.
             </p>
             <Button
-              className="mt-4 w-full deal-gradient text-deal-foreground"
+              className="mt-4 w-full text-deal-foreground"
+              style={{ background: gift.box_color }}
               onClick={() => setOpened(true)}
             >
-              <Sparkles className="size-4" /> Open the box
+              <Sparkles className="size-4" /> {gift.cta}
             </Button>
           </>
         )}

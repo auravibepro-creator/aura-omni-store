@@ -16,6 +16,9 @@ import { VendorsPanel } from "@/components/admin/VendorsPanel";
 import { TickerStylePanel } from "@/components/admin/TickerStylePanel";
 import { OverlayPanel } from "@/components/admin/OverlayPanel";
 import { BiometricPanel } from "@/components/admin/BiometricPanel";
+import { BrandingPanel } from "@/components/admin/BrandingPanel";
+import { PaymentsPanel } from "@/components/admin/PaymentsPanel";
+import { SupportPanel } from "@/components/admin/SupportPanel";
 import { BiometricLoginButton } from "@/components/auth/BiometricButtons";
 import { formatPKR } from "@/lib/shop";
 import {
@@ -254,6 +257,15 @@ function AdminPage() {
           <TabsTrigger value="storefront" className="flex-1">
             Tabs
           </TabsTrigger>
+          <TabsTrigger value="branding" className="flex-1">
+            Branding
+          </TabsTrigger>
+          <TabsTrigger value="wallets" className="flex-1">
+            Wallets
+          </TabsTrigger>
+          <TabsTrigger value="support" className="flex-1">
+            Support
+          </TabsTrigger>
           <TabsTrigger value="vendors" className="flex-1">
             Vendors
           </TabsTrigger>
@@ -262,6 +274,15 @@ function AdminPage() {
         {/* MASTER ADMIN: storefront tabs + vendor logins */}
         <TabsContent value="storefront">
           <StorefrontTabsPanel password={password} />
+        </TabsContent>
+        <TabsContent value="branding">
+          <BrandingPanel password={password} />
+        </TabsContent>
+        <TabsContent value="wallets">
+          <PaymentsPanel password={password} />
+        </TabsContent>
+        <TabsContent value="support">
+          <SupportPanel password={password} />
         </TabsContent>
         <TabsContent value="vendors">
           <VendorsPanel password={password} />

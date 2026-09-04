@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Ticker } from "./Ticker";
 import { useCart } from "@/lib/cart";
 import { DEFAULT_TICKER_STYLE, fetchAnnouncements, fetchTickerStyle } from "@/lib/shop";
+import { useBranding } from "@/lib/branding-provider";
+import { REGIONS, useRegion } from "@/lib/currency";
 
 type Props = {
   search?: string;
@@ -15,6 +17,8 @@ type Props = {
 
 export function ShopHeader({ search, onSearchChange, title, showBack }: Props) {
   const { count } = useCart();
+  const branding = useBranding();
+  const { region, setRegion } = useRegion();
   const { data: messages } = useQuery({
     queryKey: ["announcements"],
     queryFn: fetchAnnouncements,
@@ -53,8 +57,33 @@ export function ShopHeader({ search, onSearchChange, title, showBack }: Props) {
             />
           </label>
         ) : (
-          <h1 className="flex-1 truncate text-base font-semibold">{title}</h1>
+          <h1 className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-base font-semibold">
+            {branding.logo_url ? (
+              <img
+                src={branding.logo_url}
+                alt={branding.app_name}
+                width={28}
+                height={28}
+                loading="lazy"
+                className="size-7 shrink-0 rounded-full object-cover"
+              />
+            ) : null}
+            <span className="truncate">{title ?? branding.app_name}</span>
+          </h1>
         )}
+
+        <select
+          aria-label="Region and currency"
+          value={region.code}
+          onChange={(event) => setRegion(event.target.value)}
+          className="h-9 shrink-0 rounded-full bg-secondary px-2 text-[11px] font-semibold text-secondary-foreground"
+        >
+          {REGIONS.map((item) => (
+            <option key={item.code} value={item.code}>
+              {item.flag} {item.currency}
+            </option>
+          ))}
+        </select>
 
         <Link
           to="/admin"
