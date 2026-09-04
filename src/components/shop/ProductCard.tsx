@@ -8,6 +8,7 @@ import { useAdminMode } from "@/lib/admin-mode";
 export function ProductCard({ product }: { product: Product }) {
   const off = discountPercent(product);
   const { editMode, openEditor } = useAdminMode();
+  const { format } = useRegion();
 
   return (
     <Link
@@ -50,10 +51,10 @@ export function ProductCard({ product }: { product: Product }) {
       <div className="flex flex-1 flex-col gap-1 p-2.5">
         <p className="line-clamp-2 text-[13px] leading-snug font-medium">{product.name}</p>
         <div className="flex items-baseline gap-1.5">
-          <span className="text-[15px] font-extrabold text-deal">{formatPKR(product.price)}</span>
+          <span className="text-[15px] font-extrabold text-deal">{format(product.price)}</span>
           {product.compare_at_price ? (
             <span className="text-[11px] text-muted-foreground line-through">
-              {formatPKR(product.compare_at_price)}
+              {format(product.compare_at_price)}
             </span>
           ) : null}
         </div>
