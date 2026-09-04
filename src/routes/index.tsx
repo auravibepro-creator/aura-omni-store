@@ -150,8 +150,11 @@ function Home() {
         )}
       </section>
 
+      <SocialBar />
       <RewardBox />
+      <SupportWidget />
       <BottomNav />
+
     </div>
   );
 }
