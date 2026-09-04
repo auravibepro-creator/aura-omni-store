@@ -14,7 +14,128 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      announcements: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          message: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          created_at: string
+          icon: string
+          id: string
+          image_url: string | null
+          is_hot: boolean
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          icon?: string
+          id?: string
+          image_url?: string | null
+          is_hot?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          icon?: string
+          id?: string
+          image_url?: string | null
+          is_hot?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category_id: string | null
+          compare_at_price: number | null
+          created_at: string
+          description: string
+          id: string
+          images: string[]
+          is_active: boolean
+          is_featured: boolean
+          name: string
+          price: number
+          rating: number
+          sold_count: number
+          stock: number
+          updated_at: string
+          variants: string[]
+          video_url: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          compare_at_price?: number | null
+          created_at?: string
+          description?: string
+          id?: string
+          images?: string[]
+          is_active?: boolean
+          is_featured?: boolean
+          name: string
+          price?: number
+          rating?: number
+          sold_count?: number
+          stock?: number
+          updated_at?: string
+          variants?: string[]
+          video_url?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          compare_at_price?: number | null
+          created_at?: string
+          description?: string
+          id?: string
+          images?: string[]
+          is_active?: boolean
+          is_featured?: boolean
+          name?: string
+          price?: number
+          rating?: number
+          sold_count?: number
+          stock?: number
+          updated_at?: string
+          variants?: string[]
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
