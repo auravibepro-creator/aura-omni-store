@@ -45,6 +45,19 @@ export const supportCreateThread = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
+    if (data.message) {
+      await supabaseAdmin
+        .from("support_messages")
+        .insert({ thread_id: (thread as { id: string }).id, sender: "customer", body: data.message });
+    }
+    await supabaseAdmin.from("support_messages").insert({
+      thread_id: (thread as { id: string }).id,
+      sender: "system",
+      body: agent
+        ? `${agent.name as string} joined the ${data.channel === "call" ? "call" : "chat"}.`
+        : "All agents are busy — you are in the queue and will be connected shortly.",
+    });
+
     if (agent) {
       await supabaseAdmin
         .from("support_agents")
@@ -101,4 +114,53 @@ export const supportAiChat = createServerFn({ method: "POST" })
       choices?: { message?: { content?: string } }[];
     };
     return { reply: json.choices?.[0]?.message?.content ?? "Sorry, I could not answer that." };
+  });
+
+const threadIdShape = z.object({ thread_id: z.string().uuid() });
+
+/** Customer side of an in-app conversation: messages plus assigned agent. */
+export const supportFetchThread = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => threadIdShape.parse(data))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: thread } = await supabaseAdmin
+      .from("support_threads")
+      .select("id,status,channel,agent_id")
+      .eq("id", data.thread_id)
+      .maybeSingle();
+    if (!thread) throw new Error("Conversation not found");
+
+    const agentId = (thread as { agent_id: string | null }).agent_id;
+    const [{ data: messages }, agentRes] = await Promise.all([
+      supabaseAdmin
+        .from("support_messages")
+        .select("id,sender,body,created_at")
+        .eq("thread_id", data.thread_id)
+        .order("created_at", { ascending: true })
+        .limit(200),
+      agentId
+        ? supabaseAdmin.from("support_agents").select("name").eq("id", agentId).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+
+    return {
+      status: (thread as { status: string }).status,
+      channel: (thread as { channel: string }).channel,
+      agentName: ((agentRes as { data: { name?: string } | null }).data?.name as string | undefined) ?? null,
+      messages: (messages ?? []) as { id: string; sender: string; body: string; created_at: string }[],
+    };
+  });
+
+/** Customer sends a message into their in-app conversation. */
+export const supportSendMessage = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    threadIdShape.extend({ body: z.string().trim().min(1).max(2000) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("support_messages")
+      .insert({ thread_id: data.thread_id, sender: "customer", body: data.body });
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
   });
