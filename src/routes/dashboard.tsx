@@ -188,7 +188,7 @@ function DashboardPage() {
         {isStaff ? (
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatCard icon={<Package className="h-4 w-4" />} label="Active orders" value={String(totals.pending)} />
-            <StatCard icon={<TrendingUp className="h-4 w-4" />} label="Delivered" value={String(totals.deliveredCount)} />
+            <StatCard icon={<TrendingUp className="h-4 w-4" />} label="Delivered" value={`${totals.deliveredCount} (${totals.doneToday} today)`} />
             <StatCard icon={<Wallet className="h-4 w-4" />} label="Sales value" value={money(totals.sales)} />
             <StatCard
               icon={<Wallet className="h-4 w-4" />}
@@ -264,7 +264,7 @@ function DashboardPage() {
               .
             </p>
           ) : (
-            orders.map((order) => {
+            routeOrders.map((order, index) => {
               const km =
                 here && order.latitude != null && order.longitude != null
                   ? distanceKm(here, { latitude: Number(order.latitude), longitude: Number(order.longitude) })
@@ -317,7 +317,7 @@ function DashboardPage() {
                         className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-[11px] font-semibold text-secondary-foreground"
                       >
                         <MapPin className="h-3.5 w-3.5" />
-                        Route{km != null ? ` · ${km.toFixed(1)} km` : ""}
+                        Stop {index + 1}{km != null ? ` · ${km.toFixed(1)} km` : ""}
                       </a>
                       {ORDER_STATUSES.filter((status) => status !== order.status).map((status) => (
                         <button
