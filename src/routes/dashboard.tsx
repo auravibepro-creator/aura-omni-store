@@ -95,12 +95,37 @@ function DashboardPage() {
   }, [userId, roles.join(",")]);
 
   const totals = useMemo(() => {
+    const percent = Number(staff?.commission_percent ?? 0);
     const delivered = orders.filter((order) => order.status === "delivered");
     const sales = delivered.reduce((sum, order) => sum + Number(order.total ?? 0), 0);
-    const commission = delivered.reduce((sum, order) => sum + Number(order.commission_amount ?? 0), 0);
-    const pending = orders.filter((order) => order.status !== "delivered" && order.status !== "cancelled").length;
-    return { sales, commission, pending, deliveredCount: delivered.length };
-  }, [orders]);
+    const commission = delivered.reduce((sum, order) => {
+      const stored = Number(order.commission_amount ?? 0);
+      return sum + (stored > 0 ? stored : (Number(order.total ?? 0) * percent) / 100);
+    }, 0);
+    const open = orders.filter((order) => order.status !== "delivered" && order.status !== "cancelled");
+    const today = new Date().toDateString();
+    const doneToday = delivered.filter((order) => new Date(order.created_at).toDateString() === today).length;
+    return { sales, commission, pending: open.length, deliveredCount: delivered.length, doneToday };
+  }, [orders, staff]);
+
+  /** Riders see the nearest drop-off first once GPS is on. */
+  const routeOrders = useMemo(() => {
+    const open = orders.filter((order) => order.status !== "delivered" && order.status !== "cancelled");
+    const rest = orders.filter((order) => order.status === "delivered" || order.status === "cancelled");
+    if (!here) return [...open, ...rest];
+    const withDistance = open
+      .map((order) => ({
+        order,
+        km:
+          order.latitude != null && order.longitude != null
+            ? distanceKm(here, { latitude: Number(order.latitude), longitude: Number(order.longitude) })
+            : Number.POSITIVE_INFINITY,
+      }))
+      .sort((a, b) => a.km - b.km)
+      .map((entry) => entry.order);
+    return [...withDistance, ...rest];
+  }, [orders, here]);
+
 
   async function setStatus(order: OrderRow, status: OrderStatus) {
     try {
