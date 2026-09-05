@@ -35,10 +35,9 @@ const categoryShape = z.object({
   sort_order: z.number().int().min(0).max(999).default(0),
 });
 
-function assertPassword(password: string) {
-  const expected = process.env["ADMIN_PASSWORD"];
-  if (!expected) throw new Error("Admin password is not configured");
-  if (password !== expected) throw new Error("Incorrect admin password");
+async function assertPassword(password: string) {
+  const { assertAdminPasswordValue } = await import("@/lib/admin-password.server");
+  assertAdminPasswordValue(password);
 }
 
 async function admin() {
@@ -49,14 +48,14 @@ async function admin() {
 export const adminLogin = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     return { ok: true as const };
   });
 
 export const adminListAll = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const [products, categories, announcements] = await Promise.all([
       db.from("products").select("*").order("created_at", { ascending: false }),
@@ -76,7 +75,7 @@ export const adminListAll = createServerFn({ method: "POST" })
 export const adminSaveProduct = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ product: productShape }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { id, ...fields } = data.product;
     const { error } = id
@@ -89,7 +88,7 @@ export const adminSaveProduct = createServerFn({ method: "POST" })
 export const adminDeleteProduct = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { error } = await db.from("products").delete().eq("id", data.id);
     if (error) throw error;
@@ -99,7 +98,7 @@ export const adminDeleteProduct = createServerFn({ method: "POST" })
 export const adminSaveCategory = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ category: categoryShape }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { id, ...fields } = data.category;
     const { error } = id
@@ -112,7 +111,7 @@ export const adminSaveCategory = createServerFn({ method: "POST" })
 export const adminDeleteCategory = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { error } = await db.from("categories").delete().eq("id", data.id);
     if (error) throw error;
@@ -133,7 +132,7 @@ export const adminSaveAnnouncement = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { id, ...fields } = data.announcement;
     const { error } = id
@@ -146,7 +145,7 @@ export const adminSaveAnnouncement = createServerFn({ method: "POST" })
 export const adminDeleteAnnouncement = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { error } = await db.from("announcements").delete().eq("id", data.id);
     if (error) throw error;
@@ -173,7 +172,7 @@ const tabShape = z.object({
 export const adminListTabs = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { data: rows, error } = await db
       .from("tabs")
@@ -187,7 +186,7 @@ export const adminListTabs = createServerFn({ method: "POST" })
 export const adminSaveTab = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ tab: tabShape }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { id, ...fields } = data.tab;
     const { error } = id
@@ -200,7 +199,7 @@ export const adminSaveTab = createServerFn({ method: "POST" })
 export const adminDeleteTab = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { error } = await db.from("tabs").delete().eq("id", data.id);
     if (error) throw error;
@@ -213,7 +212,7 @@ export const adminReorderTabs = createServerFn({ method: "POST" })
     passwordShape.extend({ ids: z.array(z.string().uuid()).max(200) }).parse(data),
   )
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     for (let index = 0; index < data.ids.length; index += 1) {
       const { error } = await db
@@ -230,7 +229,7 @@ export const adminReorderTabs = createServerFn({ method: "POST" })
 export const adminListVendors = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { data: rows, error } = await db
       .from("vendors")
@@ -260,7 +259,7 @@ export const adminSaveVendor = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { id, password, ...fields } = data.vendor;
     if (id) {
@@ -284,7 +283,7 @@ export const adminSaveVendor = createServerFn({ method: "POST" })
 export const adminDeleteVendor = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { error } = await db.from("vendors").delete().eq("id", data.id);
     if (error) throw error;
@@ -308,7 +307,7 @@ const tickerStyleShape = z.object({
 export const adminGetTickerStyle = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { data: row, error } = await db
       .from("site_settings")
@@ -322,7 +321,7 @@ export const adminGetTickerStyle = createServerFn({ method: "POST" })
 export const adminSaveTickerStyle = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ style: tickerStyleShape }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { error } = await db
       .from("site_settings")
@@ -341,7 +340,7 @@ const overlaySettingsShape = z.object({
 export const adminGetOverlaySettings = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { data: row, error } = await db
       .from("site_settings")
@@ -357,7 +356,7 @@ export const adminSaveOverlaySettings = createServerFn({ method: "POST" })
     passwordShape.extend({ settings: overlaySettingsShape }).parse(data),
   )
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { error } = await db.from("site_settings").upsert({
       key: "overlay_settings",
@@ -375,7 +374,7 @@ const settingKeyShape = z.enum(["branding", "gift_box", "social"]);
 export const adminGetSetting = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ key: settingKeyShape }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { data: row, error } = await db
       .from("site_settings")
@@ -393,7 +392,7 @@ export const adminSaveSetting = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { error } = await db.from("site_settings").upsert({
       key: data.key,
@@ -420,7 +419,7 @@ const accountShape = z.object({
 export const adminListWallets = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const [accounts, ledger, orders] = await Promise.all([
       db.from("payment_accounts").select("*").order("sort_order", { ascending: true }),
@@ -441,7 +440,7 @@ export const adminListWallets = createServerFn({ method: "POST" })
 export const adminSaveAccount = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ account: accountShape }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { id, ...fields } = data.account;
     const { error } = id
@@ -454,7 +453,7 @@ export const adminSaveAccount = createServerFn({ method: "POST" })
 export const adminDeleteAccount = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { error } = await db.from("payment_accounts").delete().eq("id", data.id);
     if (error) throw error;
@@ -476,7 +475,7 @@ const agentShape = z.object({
 export const adminListSupport = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const [agents, threads] = await Promise.all([
       db.from("support_agents").select("*").order("sort_order", { ascending: true }),
@@ -488,7 +487,7 @@ export const adminListSupport = createServerFn({ method: "POST" })
 export const adminSaveAgent = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ agent: agentShape }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { id, ...fields } = data.agent;
     const { error } = id
@@ -501,7 +500,7 @@ export const adminSaveAgent = createServerFn({ method: "POST" })
 export const adminDeleteAgent = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { error } = await db.from("support_agents").delete().eq("id", data.id);
     if (error) throw error;
@@ -511,7 +510,7 @@ export const adminDeleteAgent = createServerFn({ method: "POST" })
 export const adminCloseThread = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => passwordShape.extend({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
-    assertPassword(data.password);
+    await assertPassword(data.password);
     const db = await admin();
     const { data: thread } = await db
       .from("support_threads")

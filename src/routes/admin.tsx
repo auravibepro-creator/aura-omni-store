@@ -20,6 +20,7 @@ import { BrandingPanel } from "@/components/admin/BrandingPanel";
 import { PaymentsPanel } from "@/components/admin/PaymentsPanel";
 import { SupportPanel } from "@/components/admin/SupportPanel";
 import { BiometricLoginButton } from "@/components/auth/BiometricButtons";
+import { ensureDeviceToken } from "@/lib/webauthn-client";
 import { formatPKR } from "@/lib/shop";
 import {
   adminDeleteAnnouncement,
@@ -136,6 +137,7 @@ function AdminPage() {
       await refresh(pw);
       setAuthed(true);
       window.sessionStorage.setItem(STORAGE_KEY, pw);
+      void ensureDeviceToken({ scope: "admin", password: pw });
     } catch {
       window.sessionStorage.removeItem(STORAGE_KEY);
       toast.error("Incorrect admin password");

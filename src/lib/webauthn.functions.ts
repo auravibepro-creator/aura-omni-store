@@ -43,9 +43,8 @@ function relyingParty() {
 }
 
 async function assertAdminPassword(password: string) {
-  const expected = process.env["ADMIN_PASSWORD"];
-  if (!expected) throw new Error("Admin password is not configured");
-  if (password !== expected) throw new Error("Incorrect admin password");
+  const { assertAdminPasswordValue } = await import("@/lib/admin-password.server");
+  assertAdminPasswordValue(password);
 }
 
 async function assertVendorPassword(username: string, password: string) {
@@ -107,11 +106,13 @@ export const webauthnRegisterBegin = createServerFn({ method: "POST" })
         ? client
             .from("webauthn_credentials")
             .select("credential_id")
+            .neq("public_key", "device-token")
             .eq("scope", "vendor")
             .eq("vendor_username", data.username)
         : client
             .from("webauthn_credentials")
             .select("credential_id")
+            .neq("public_key", "device-token")
             .eq("scope", "admin")
             .is("vendor_username", null);
     const { data: existing } = await existingQuery;
@@ -209,6 +210,7 @@ export const webauthnLoginBegin = createServerFn({ method: "POST" })
     let query = client
       .from("webauthn_credentials")
       .select("credential_id, transports")
+      .neq("public_key", "device-token")
       .eq("scope", data.scope);
     query =
       data.scope === "vendor" && data.username
@@ -326,4 +328,73 @@ export const webauthnDeleteDevice = createServerFn({ method: "POST" })
     const { error } = await client.from("webauthn_credentials").delete().eq("id", data.id);
     if (error) throw error;
     return { ok: true as const };
+  });
+
+/**
+ * Device-token fallback. Used when this browser/device cannot complete a real
+ * WebAuthn/biometric ceremony (previews, desktop browsers, in-app webviews).
+ * The token is issued only after a valid password check and is stored on the
+ * device; presenting it later returns the saved credentials.
+ */
+export const deviceTokenIssue = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        scope: scopeShape,
+        username: z.string().trim().max(40).optional(),
+        password: z.string().min(1).max(200),
+        label: z.string().trim().max(60).optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    if (data.scope === "admin") await assertAdminPassword(data.password);
+    else {
+      if (!data.username) throw new Error("Vendor username is required");
+      await assertVendorPassword(data.username, data.password);
+    }
+
+    const token = `${crypto.randomUUID()}${crypto.randomUUID()}`.replace(/-/g, "");
+    const client = await db();
+    const { error } = await client.from("webauthn_credentials").insert({
+      scope: data.scope,
+      vendor_username: data.scope === "vendor" ? (data.username ?? null) : null,
+      credential_id: `device-token:${token}`,
+      public_key: "device-token",
+      counter: 0,
+      transports: [],
+      label: data.label?.trim() || "This device",
+      secret: data.password,
+    });
+    if (error) throw error;
+
+    return { token };
+  });
+
+export const deviceTokenLogin = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z.object({ scope: scopeShape, token: z.string().min(10).max(200) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const client = await db();
+    const { data: row } = await client
+      .from("webauthn_credentials")
+      .select("*")
+      .eq("credential_id", `device-token:${data.token}`)
+      .eq("scope", data.scope)
+      .maybeSingle();
+    if (!row) throw new Error("This device is not registered");
+
+    await client
+      .from("webauthn_credentials")
+      .update({ last_used_at: new Date().toISOString() })
+      .eq("id", row.id);
+
+    if (data.scope === "admin") {
+      await assertAdminPassword(row.secret);
+      return { scope: "admin" as const, password: row.secret, username: null };
+    }
+    if (!row.vendor_username) throw new Error("This device is not registered");
+    await assertVendorPassword(row.vendor_username, row.secret);
+    return { scope: "vendor" as const, password: row.secret, username: row.vendor_username };
   });

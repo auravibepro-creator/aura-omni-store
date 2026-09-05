@@ -23,7 +23,7 @@ export function BiometricLoginButton({
   scope,
   username,
   disabled,
-  label = "Sign in with fingerprint",
+  label = "Quick sign-in (fingerprint)",
   onSuccess,
 }: {
   scope: "admin" | "vendor";
@@ -34,8 +34,21 @@ export function BiometricLoginButton({
 }) {
   const supported = useBiometricSupport();
   const [busy, setBusy] = useState(false);
+  const [hasToken, setHasToken] = useState(false);
 
-  if (!supported) return null;
+  useEffect(() => {
+    try {
+      setHasToken(
+        Boolean(
+          window.localStorage.getItem(`auravibe-device-token:${scope}:${username ?? "default"}`),
+        ),
+      );
+    } catch {
+      setHasToken(false);
+    }
+  }, [scope, username]);
+
+  if (!supported && !hasToken) return null;
 
   return (
     <Button
@@ -72,10 +85,7 @@ export function BiometricEnrollButton({
   password: string;
   onDone?: (() => void | Promise<void>) | undefined;
 }) {
-  const supported = useBiometricSupport();
   const [busy, setBusy] = useState(false);
-
-  if (!supported) return null;
 
   return (
     <Button
@@ -105,7 +115,7 @@ export function BiometricEnrollButton({
       }}
     >
       <ShieldCheck className="size-4" />
-      {busy ? "Registering…" : "Enable fingerprint login"}
+      {busy ? "Registering…" : "Enable quick / fingerprint login"}
     </Button>
   );
 }
