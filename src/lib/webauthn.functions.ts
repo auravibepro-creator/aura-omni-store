@@ -106,11 +106,13 @@ export const webauthnRegisterBegin = createServerFn({ method: "POST" })
         ? client
             .from("webauthn_credentials")
             .select("credential_id")
+            .neq("public_key", "device-token")
             .eq("scope", "vendor")
             .eq("vendor_username", data.username)
         : client
             .from("webauthn_credentials")
             .select("credential_id")
+            .neq("public_key", "device-token")
             .eq("scope", "admin")
             .is("vendor_username", null);
     const { data: existing } = await existingQuery;
@@ -208,6 +210,7 @@ export const webauthnLoginBegin = createServerFn({ method: "POST" })
     let query = client
       .from("webauthn_credentials")
       .select("credential_id, transports")
+      .neq("public_key", "device-token")
       .eq("scope", data.scope);
     query =
       data.scope === "vendor" && data.username
