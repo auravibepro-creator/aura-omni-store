@@ -43,9 +43,8 @@ function relyingParty() {
 }
 
 async function assertAdminPassword(password: string) {
-  const expected = process.env["ADMIN_PASSWORD"];
-  if (!expected) throw new Error("Admin password is not configured");
-  if (password !== expected) throw new Error("Incorrect admin password");
+  const { assertAdminPasswordValue } = await import("@/lib/admin-password.server");
+  assertAdminPasswordValue(password);
 }
 
 async function assertVendorPassword(username: string, password: string) {
