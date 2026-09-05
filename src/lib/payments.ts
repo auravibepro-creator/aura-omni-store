@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { listCheckoutAccounts } from "@/lib/payments.functions";
 
 export type PaymentAccount = {
   id: string;
@@ -25,13 +25,8 @@ export function providerLabel(provider: string) {
 }
 
 export async function fetchPaymentAccounts(): Promise<PaymentAccount[]> {
-  const { data, error } = await supabase
-    .from("payment_accounts")
-    .select("id,provider,account_title,account_number,bank_name,instructions,is_active,sort_order,use_count,last_used_at")
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as unknown as PaymentAccount[];
+  const { accounts } = await listCheckoutAccounts();
+  return accounts as unknown as PaymentAccount[];
 }
 
 /**
