@@ -12,6 +12,7 @@ import {
   adminListSupport,
   adminSaveAgent,
 } from "@/lib/admin.functions";
+import { adminReplyThread, adminThreadMessages } from "@/lib/staff.functions";
 
 type AgentRow = {
   id: string;
@@ -188,24 +189,13 @@ export function SupportPanel({ password }: { password: string }) {
           <p className="text-xs text-muted-foreground">No open conversations.</p>
         ) : null}
         {queued.map((thread) => (
-          <div key={thread.id} className="rounded-xl bg-muted/50 px-3 py-2 text-xs">
-            <p className="font-semibold">
-              {thread.channel === "call" ? "📞 Call" : "💬 Chat"} ·{" "}
-              {agents.find((a) => a.id === thread.agent_id)?.name ?? "Unassigned"}
-            </p>
-            <p className="truncate text-[11px] text-muted-foreground">{thread.message}</p>
-            <Button
-              size="sm"
-              variant="outline"
-              className="mt-1.5 h-7 text-[11px]"
-              onClick={async () => {
-                await adminCloseThread({ data: { password, id: thread.id } });
-                await refresh();
-              }}
-            >
-              Mark handled
-            </Button>
-          </div>
+          <ThreadCard
+            key={thread.id}
+            password={password}
+            thread={thread}
+            agentName={agents.find((a) => a.id === thread.agent_id)?.name ?? "Unassigned"}
+            onClosed={refresh}
+          />
         ))}
       </section>
     </div>
@@ -217,6 +207,110 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl bg-muted/50 px-2 py-2">
       <p className="text-[10px] text-muted-foreground">{label}</p>
       <p className="text-sm font-bold">{value}</p>
+    </div>
+  );
+}
+
+type ThreadMessage = { id: string; sender: string; body: string; created_at: string };
+
+/** One live conversation: agent replies in-app, no external dialer needed. */
+function ThreadCard({
+  password,
+  thread,
+  agentName,
+  onClosed,
+}: {
+  password: string;
+  thread: ThreadRow;
+  agentName: string;
+  onClosed: () => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState<ThreadMessage[]>([]);
+  const [reply, setReply] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const data = await adminThreadMessages({ data: { password, thread_id: thread.id } });
+    setMessages(data.messages as ThreadMessage[]);
+  }, [password, thread.id]);
+
+  useEffect(() => {
+    if (!open) return;
+    void load();
+    const timer = setInterval(() => void load(), 5000);
+    return () => clearInterval(timer);
+  }, [open, load]);
+
+  return (
+    <div className="rounded-xl bg-muted/50 px-3 py-2 text-xs">
+      <button type="button" className="w-full text-left" onClick={() => setOpen(!open)}>
+        <p className="font-semibold">
+          {thread.channel === "call" ? "📞 Call" : "💬 Chat"} · {agentName}
+        </p>
+        <p className="truncate text-[11px] text-muted-foreground">{thread.message || "New request"}</p>
+      </button>
+
+      {open ? (
+        <div className="mt-2 space-y-2">
+          <div className="max-h-48 space-y-1.5 overflow-y-auto rounded-lg bg-background p-2">
+            {messages.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">No messages yet.</p>
+            ) : null}
+            {messages.map((message) => (
+              <p
+                key={message.id}
+                className={
+                  message.sender === "agent"
+                    ? "ml-auto w-fit max-w-[85%] rounded-lg bg-primary px-2 py-1 text-[11px] text-primary-foreground"
+                    : "w-fit max-w-[85%] rounded-lg bg-muted px-2 py-1 text-[11px]"
+                }
+              >
+                {message.body}
+              </p>
+            ))}
+          </div>
+          <div className="flex gap-1.5">
+            <Input
+              className="h-8 text-xs"
+              value={reply}
+              maxLength={2000}
+              placeholder="Reply to customer…"
+              onChange={(event) => setReply(event.target.value)}
+            />
+            <Button
+              size="sm"
+              className="h-8"
+              disabled={busy || !reply.trim()}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await adminReplyThread({ data: { password, thread_id: thread.id, body: reply.trim() } });
+                  setReply("");
+                  await load();
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : "Could not send");
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Send
+            </Button>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[11px]"
+            onClick={async () => {
+              await adminCloseThread({ data: { password, id: thread.id } });
+              await onClosed();
+            }}
+          >
+            Mark handled
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
