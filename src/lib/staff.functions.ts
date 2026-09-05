@@ -3,6 +3,20 @@ import { z } from "zod";
 
 const passwordShape = z.object({ password: z.string().min(1).max(200) });
 
+export type AssignOrderRow = {
+  id: string;
+  order_code: string;
+  customer_name: string;
+  city: string | null;
+  address: string;
+  total: number;
+  status: string;
+  sales_agent_id: string | null;
+  delivery_agent_id: string | null;
+  commission_amount: number;
+  created_at: string;
+};
+
 const ROLES = ["admin", "agent", "sales", "delivery", "user"] as const;
 
 async function assertPassword(password: string) {
@@ -37,17 +51,17 @@ export const adminListStaff = createServerFn({ method: "POST" })
 
     const roleRows = (roles.data ?? []) as { user_id: string; role: string }[];
     const settingRows = (settings.data ?? []) as Record<string, unknown>[];
-    const orderRows = (orders.data ?? []) as Record<string, unknown>[];
+    const orderRows = (orders.data ?? []) as AssignOrderRow[];
 
     const people = ((profiles.data ?? []) as { id: string; email: string | null; full_name: string; phone: string | null }[]).map(
       (person) => {
         const personRoles = roleRows.filter((row) => row.user_id === person.id).map((row) => row.role);
         const setting = settingRows.find((row) => row['user_id'] === person.id) ?? null;
-        const sales = orderRows.filter((row) => row['sales_agent_id'] === person.id);
-        const deliveries = orderRows.filter((row) => row['delivery_agent_id'] === person.id);
-        const deliveredSales = sales.filter((row) => row['status'] === "delivered");
+        const sales = orderRows.filter((row) => row.sales_agent_id === person.id);
+        const deliveries = orderRows.filter((row) => row.delivery_agent_id === person.id);
+        const deliveredSales = sales.filter((row) => row.status === "delivered");
         const percent = Number((setting?.['commission_percent'] as number | undefined) ?? 0);
-        const salesValue = deliveredSales.reduce((sum, row) => sum + Number(row['total'] ?? 0), 0);
+        const salesValue = deliveredSales.reduce((sum, row) => sum + Number(row.total ?? 0), 0);
         return {
           id: person.id,
           email: person.email,
