@@ -3,7 +3,12 @@ import { Fingerprint, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { biometricsAvailable, loginWithBiometric, registerBiometric } from "@/lib/webauthn-client";
+import {
+  biometricsAvailable,
+  loginWithBiometric,
+  registerBiometric,
+  type Scope,
+} from "@/lib/webauthn-client";
 
 function useBiometricSupport() {
   const [supported, setSupported] = useState(false);
@@ -26,7 +31,7 @@ export function BiometricLoginButton({
   label = "Quick sign-in (fingerprint)",
   onSuccess,
 }: {
-  scope: "admin" | "vendor";
+  scope: Scope;
   username?: string | undefined;
   disabled?: boolean | undefined;
   label?: string | undefined;
@@ -80,7 +85,7 @@ export function BiometricEnrollButton({
   password,
   onDone,
 }: {
-  scope: "admin" | "vendor";
+  scope: Scope;
   username?: string | undefined;
   password: string;
   onDone?: (() => void | Promise<void>) | undefined;
@@ -103,7 +108,7 @@ export function BiometricEnrollButton({
           await registerBiometric(
             scope === "admin"
               ? { scope: "admin", password, label }
-              : { scope: "vendor", username: username!, password, label },
+              : { scope, username: username!, password, label },
           );
           toast.success("Fingerprint login enabled on this device");
           await onDone?.();
