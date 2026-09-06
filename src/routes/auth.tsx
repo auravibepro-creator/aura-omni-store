@@ -84,12 +84,12 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen pb-16">
-      <ShopHeader title={mode === "signin" ? "Sign in" : "Create account"} showBack />
+      <ShopHeader title="CEO Aura Vibe" showBack />
 
       <div className="mx-auto mt-4 w-full max-w-md px-3">
         <div className="rounded-2xl bg-card p-4 card-shadow">
           <h1 className="font-display text-lg font-bold">
-            {mode === "signin" ? "Welcome back" : "Join Aura Omni Store"}
+            {mode === "signin" ? "CEO Aura Vibe" : "Join Aura Omni Store"}
           </h1>
           <p className="mt-1 text-xs text-muted-foreground">
             One account for customers and for the admin, sales, support and delivery dashboards.
