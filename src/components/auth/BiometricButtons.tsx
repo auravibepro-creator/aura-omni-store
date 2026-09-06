@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Fingerprint, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { biometricsAvailable, loginWithBiometric, registerBiometric } from "@/lib/webauthn-client";
+import {
+  biometricsAvailable,
+  loginWithBiometric,
+  registerBiometric,
+  type Scope,
+} from "@/lib/webauthn-client";
 
 function useBiometricSupport() {
   const [supported, setSupported] = useState(false);
@@ -24,12 +29,14 @@ export function BiometricLoginButton({
   username,
   disabled,
   label = "Quick sign-in (fingerprint)",
+  icon,
   onSuccess,
 }: {
-  scope: "admin" | "vendor";
+  scope: Scope;
   username?: string | undefined;
   disabled?: boolean | undefined;
   label?: string | undefined;
+  icon?: ReactNode | undefined;
   onSuccess: (result: { password: string; username: string | null }) => void | Promise<void>;
 }) {
   const supported = useBiometricSupport();
@@ -68,7 +75,7 @@ export function BiometricLoginButton({
         }
       }}
     >
-      <Fingerprint className="size-4" />
+      {icon ?? <Fingerprint className="size-4" />}
       {busy ? "Verifying…" : label}
     </Button>
   );
@@ -80,7 +87,7 @@ export function BiometricEnrollButton({
   password,
   onDone,
 }: {
-  scope: "admin" | "vendor";
+  scope: Scope;
   username?: string | undefined;
   password: string;
   onDone?: (() => void | Promise<void>) | undefined;
@@ -103,7 +110,7 @@ export function BiometricEnrollButton({
           await registerBiometric(
             scope === "admin"
               ? { scope: "admin", password, label }
-              : { scope: "vendor", username: username!, password, label },
+              : { scope, username: username!, password, label },
           );
           toast.success("Fingerprint login enabled on this device");
           await onDone?.();

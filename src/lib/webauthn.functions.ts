@@ -6,12 +6,17 @@ import { hashPassword } from "@/lib/hash";
 
 const RP_NAME = "Aura Omni Store";
 
-const scopeShape = z.enum(["admin", "vendor"]);
+const scopeShape = z.enum(["admin", "vendor", "account"]);
 
 const registerBeginShape = z.union([
   z.object({ scope: z.literal("admin"), password: z.string().min(1).max(200) }),
   z.object({
     scope: z.literal("vendor"),
+    username: z.string().trim().min(3).max(40),
+    password: z.string().min(1).max(200),
+  }),
+  z.object({
+    scope: z.literal("account"),
     username: z.string().trim().min(3).max(40),
     password: z.string().min(1).max(200),
   }),
@@ -44,7 +49,7 @@ function relyingParty() {
 
 async function assertAdminPassword(password: string) {
   const { assertAdminPasswordValue } = await import("@/lib/admin-password.server");
-  assertAdminPasswordValue(password);
+  await assertAdminPasswordValue(password);
 }
 
 async function assertVendorPassword(username: string, password: string) {
@@ -56,6 +61,42 @@ async function assertVendorPassword(username: string, password: string) {
     .maybeSingle();
   if (!data || !data.is_active) throw new Error("Invalid vendor login");
   if (data.password_hash !== (await hashPassword(password))) throw new Error("Invalid vendor login");
+}
+
+/** Staff / customer account password check (username-based sign-in). */
+async function assertAccountPassword(username: string, password: string) {
+  const { createClient } = await import("@supabase/supabase-js");
+  const { usernameToEmail } = await import("@/lib/account");
+  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
+  const client = createClient(process.env["SUPABASE_URL"]!, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: (input, init) => {
+        const headers = new Headers(init?.headers);
+        if (key.startsWith("sb_") && headers.get("Authorization") === `Bearer ${key}`) {
+          headers.delete("Authorization");
+        }
+        headers.set("apikey", key);
+        return fetch(input, { ...init, headers });
+      },
+    },
+  });
+  const { error } = await client.auth.signInWithPassword({
+    email: usernameToEmail(username),
+    password,
+  });
+  if (error) throw new Error("Invalid username or password");
+}
+
+async function assertScopePassword(
+  scope: "admin" | "vendor" | "account",
+  username: string | undefined | null,
+  password: string,
+) {
+  if (scope === "admin") return assertAdminPassword(password);
+  if (!username) throw new Error("Username is required");
+  if (scope === "vendor") return assertVendorPassword(username, password);
+  return assertAccountPassword(username, password);
 }
 
 async function saveChallenge(input: {
@@ -97,24 +138,22 @@ export const webauthnRegisterBegin = createServerFn({ method: "POST" })
     const { isoBase64URL } = await import("@simplewebauthn/server/helpers");
     const client = await db();
 
-    if (data.scope === "admin") await assertAdminPassword(data.password);
-    else await assertVendorPassword(data.username, data.password);
+    await assertScopePassword(
+      data.scope,
+      data.scope === "admin" ? null : data.username,
+      data.password,
+    );
 
     const accountName = data.scope === "admin" ? "store-admin" : data.username;
+    const baseQuery = client
+      .from("webauthn_credentials")
+      .select("credential_id")
+      .neq("public_key", "device-token")
+      .eq("scope", data.scope);
     const existingQuery =
-      data.scope === "vendor"
-        ? client
-            .from("webauthn_credentials")
-            .select("credential_id")
-            .neq("public_key", "device-token")
-            .eq("scope", "vendor")
-            .eq("vendor_username", data.username)
-        : client
-            .from("webauthn_credentials")
-            .select("credential_id")
-            .neq("public_key", "device-token")
-            .eq("scope", "admin")
-            .is("vendor_username", null);
+      data.scope === "admin"
+        ? baseQuery.is("vendor_username", null)
+        : baseQuery.eq("vendor_username", data.username);
     const { data: existing } = await existingQuery;
 
     const { rpID } = relyingParty();
@@ -137,7 +176,7 @@ export const webauthnRegisterBegin = createServerFn({ method: "POST" })
       challenge: options.challenge,
       scope: data.scope,
       purpose: "register",
-      vendor_username: data.scope === "vendor" ? data.username : null,
+      vendor_username: data.scope === "admin" ? null : data.username,
     });
 
     return { options };
@@ -150,11 +189,7 @@ export const webauthnRegisterFinish = createServerFn({ method: "POST" })
     const { verifyRegistrationResponse } = await import("@simplewebauthn/server");
     const { isoBase64URL } = await import("@simplewebauthn/server/helpers");
 
-    if (data.scope === "admin") await assertAdminPassword(data.password);
-    else {
-      if (!data.username) throw new Error("Vendor username is required");
-      await assertVendorPassword(data.username, data.password);
-    }
+    await assertScopePassword(data.scope, data.username, data.password);
 
     const response = data.response as {
       response: { clientDataJSON: string };
@@ -181,7 +216,7 @@ export const webauthnRegisterFinish = createServerFn({ method: "POST" })
     const { error } = await client.from("webauthn_credentials").upsert(
       {
         scope: data.scope,
-        vendor_username: data.scope === "vendor" ? (data.username ?? null) : null,
+        vendor_username: data.scope === "admin" ? null : (data.username ?? null),
         credential_id: credential.id,
         public_key: isoBase64URL.fromBuffer(credential.publicKey),
         counter: credential.counter,
@@ -212,10 +247,8 @@ export const webauthnLoginBegin = createServerFn({ method: "POST" })
       .select("credential_id, transports")
       .neq("public_key", "device-token")
       .eq("scope", data.scope);
-    query =
-      data.scope === "vendor" && data.username
-        ? query.eq("vendor_username", data.username)
-        : query.is("vendor_username", null);
+    if (data.scope === "admin") query = query.is("vendor_username", null);
+    else if (data.username) query = query.eq("vendor_username", data.username);
     const { data: rows } = await query;
     if (!rows || rows.length === 0) {
       throw new Error("No fingerprint is registered for this account yet");
@@ -235,7 +268,7 @@ export const webauthnLoginBegin = createServerFn({ method: "POST" })
       challenge: options.challenge,
       scope: data.scope,
       purpose: "login",
-      vendor_username: data.scope === "vendor" ? (data.username ?? null) : null,
+      vendor_username: data.scope === "admin" ? null : (data.username ?? null),
     });
 
     return { options };
@@ -299,8 +332,8 @@ export const webauthnLoginFinish = createServerFn({ method: "POST" })
     }
 
     if (!row.vendor_username) throw new Error("This device is not registered");
-    await assertVendorPassword(row.vendor_username, row.secret);
-    return { scope: "vendor" as const, password: row.secret, username: row.vendor_username };
+    await assertScopePassword(data.scope, row.vendor_username, row.secret);
+    return { scope: data.scope, password: row.secret, username: row.vendor_username };
   });
 
 /** List / remove registered devices for the admin account. */
@@ -348,17 +381,13 @@ export const deviceTokenIssue = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    if (data.scope === "admin") await assertAdminPassword(data.password);
-    else {
-      if (!data.username) throw new Error("Vendor username is required");
-      await assertVendorPassword(data.username, data.password);
-    }
+    await assertScopePassword(data.scope, data.username, data.password);
 
     const token = `${crypto.randomUUID()}${crypto.randomUUID()}`.replace(/-/g, "");
     const client = await db();
     const { error } = await client.from("webauthn_credentials").insert({
       scope: data.scope,
-      vendor_username: data.scope === "vendor" ? (data.username ?? null) : null,
+      vendor_username: data.scope === "admin" ? null : (data.username ?? null),
       credential_id: `device-token:${token}`,
       public_key: "device-token",
       counter: 0,
@@ -395,6 +424,6 @@ export const deviceTokenLogin = createServerFn({ method: "POST" })
       return { scope: "admin" as const, password: row.secret, username: null };
     }
     if (!row.vendor_username) throw new Error("This device is not registered");
-    await assertVendorPassword(row.vendor_username, row.secret);
-    return { scope: "vendor" as const, password: row.secret, username: row.vendor_username };
+    await assertScopePassword(data.scope, row.vendor_username, row.secret);
+    return { scope: data.scope, password: row.secret, username: row.vendor_username };
   });

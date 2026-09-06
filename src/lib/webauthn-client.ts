@@ -7,6 +7,8 @@ import {
   webauthnRegisterFinish,
 } from "@/lib/webauthn.functions";
 
+export type Scope = "admin" | "vendor" | "account";
+
 /** True when this browser/device can do platform biometrics (fingerprint / face). */
 export async function biometricsAvailable(): Promise<boolean> {
   if (typeof window === "undefined" || !window.PublicKeyCredential) return false;
@@ -18,11 +20,11 @@ export async function biometricsAvailable(): Promise<boolean> {
   }
 }
 
-function tokenKey(scope: "admin" | "vendor", username?: string) {
+function tokenKey(scope: Scope, username?: string) {
   return `auravibe-device-token:${scope}:${username ?? "default"}`;
 }
 
-function readToken(scope: "admin" | "vendor", username?: string) {
+function readToken(scope: Scope, username?: string) {
   if (typeof window === "undefined") return null;
   try {
     return window.localStorage.getItem(tokenKey(scope, username));
@@ -31,7 +33,7 @@ function readToken(scope: "admin" | "vendor", username?: string) {
   }
 }
 
-function writeToken(scope: "admin" | "vendor", token: string, username?: string) {
+function writeToken(scope: Scope, token: string, username?: string) {
   try {
     window.localStorage.setItem(tokenKey(scope, username), token);
   } catch {
@@ -50,11 +52,11 @@ function message(error: unknown, fallback: string) {
 
 type RegisterInput =
   | { scope: "admin"; password: string; label?: string }
-  | { scope: "vendor"; username: string; password: string; label?: string };
+  | { scope: "vendor" | "account"; username: string; password: string; label?: string };
 
 /** Save a device token so this device can sign in again without the password. */
 export async function ensureDeviceToken(input: RegisterInput): Promise<void> {
-  const username = input.scope === "vendor" ? input.username : undefined;
+  const username = input.scope === "admin" ? undefined : input.username;
   if (readToken(input.scope, username)) return;
   const { token } = await deviceTokenIssue({
     data: {
@@ -68,7 +70,7 @@ export async function ensureDeviceToken(input: RegisterInput): Promise<void> {
 }
 
 export async function registerBiometric(input: RegisterInput): Promise<void> {
-  const username = input.scope === "vendor" ? input.username : undefined;
+  const username = input.scope === "admin" ? undefined : input.username;
   // Always keep a device token as the fallback path.
   try {
     await ensureDeviceToken(input);
@@ -98,7 +100,7 @@ export async function registerBiometric(input: RegisterInput): Promise<void> {
 }
 
 export async function loginWithBiometric(
-  scope: "admin" | "vendor",
+  scope: Scope,
   username?: string,
 ): Promise<{ password: string; username: string | null }> {
   const token = readToken(scope, username);

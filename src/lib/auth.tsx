@@ -19,6 +19,9 @@ export type Profile = {
   full_name: string;
   phone: string | null;
   avatar_url: string | null;
+  username: string | null;
+  designation: string | null;
+  must_onboard: boolean;
 };
 
 type AuthContextValue = {
@@ -48,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     const [profileRes, rolesRes] = await Promise.all([
-      supabase.from("profiles").select("id,email,full_name,phone,avatar_url").eq("id", userId).maybeSingle(),
+      supabase.from("profiles").select("id,email,full_name,phone,avatar_url,username,designation,must_onboard").eq("id", userId).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", userId),
     ]);
     setProfile((profileRes.data as Profile | null) ?? null);

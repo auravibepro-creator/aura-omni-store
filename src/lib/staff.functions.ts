@@ -21,7 +21,7 @@ const ROLES = ["admin", "agent", "sales", "delivery", "user"] as const;
 
 async function assertPassword(password: string) {
   const { assertAdminPasswordValue } = await import("@/lib/admin-password.server");
-  assertAdminPasswordValue(password);
+  await assertAdminPasswordValue(password);
 }
 
 async function admin() {
