@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, MapPin, Navigation, Package, TrendingUp, Wallet } from "lucide-react";
 
+import { OnboardingDialog } from "@/components/auth/OnboardingDialog";
 import { ShopHeader } from "@/components/shop/ShopHeader";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,7 +52,7 @@ const money = (value: number, currency = "PKR") =>
 
 function DashboardPage() {
   const navigate = useNavigate();
-  const { loading, session, profile, roles, hasRole } = useAuth();
+  const { loading, session, profile, roles, hasRole, refresh } = useAuth();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [staff, setStaff] = useState<StaffSettings | null>(null);
   const [busy, setBusy] = useState(true);
@@ -161,6 +162,13 @@ function DashboardPage() {
   return (
     <div className="min-h-screen pb-24">
       <ShopHeader title="My dashboard" showBack />
+
+      <OnboardingDialog
+        open={Boolean(profile?.must_onboard)}
+        username={profile?.username ?? ""}
+        defaultName={profile?.full_name ?? ""}
+        onDone={refresh}
+      />
 
       <div className="mx-auto w-full max-w-3xl space-y-4 px-3 pt-4">
         <section className="rounded-2xl bg-card p-4 card-shadow">
