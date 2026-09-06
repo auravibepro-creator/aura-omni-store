@@ -1,14 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, LogIn, UserPlus } from "lucide-react";
+import { Loader2, LogIn, ScanFace } from "lucide-react";
 
+import { BiometricLoginButton } from "@/components/auth/BiometricButtons";
 import { ShopHeader } from "@/components/shop/ShopHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { MIN_PASSWORD_LENGTH, normalizeUsername, usernameToEmail } from "@/lib/account";
+import { ensureCeoAccount } from "@/lib/accounts.functions";
 import { useAuth } from "@/lib/auth";
+import { ensureDeviceToken } from "@/lib/webauthn-client";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -17,12 +21,12 @@ export const Route = createFileRoute("/auth")({
       {
         name: "description",
         content:
-          "Sign in to your Aura Omni Store account to track orders, or access the admin, sales, support and delivery dashboards.",
+          "Sign in with your username, password, fingerprint or face unlock to reach your Aura Omni Store dashboard.",
       },
       { property: "og:title", content: "Sign in — Aura Omni Store Portal" },
       {
         property: "og:description",
-        content: "One login for customers, admins, sales agents, support agents and delivery riders.",
+        content: "One login for admins, sales agents, support agents, delivery riders and customers.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -34,49 +38,43 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const { session, loading } = useAuth();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "", fullName: "", phone: "" });
-  const [pendingConfirm, setPendingConfirm] = useState(false);
+  const [form, setForm] = useState({ username: "", password: "" });
+
+  useEffect(() => {
+    void ensureCeoAccount().catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (!loading && session) navigate({ to: "/dashboard", replace: true });
   }, [loading, session, navigate]);
 
+  async function signIn(username: string, password: string, remember: boolean) {
+    const clean = normalizeUsername(username);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: usernameToEmail(clean),
+      password,
+    });
+    if (error) throw new Error("Wrong username or password");
+    if (remember) {
+      await ensureDeviceToken({ scope: "account", username: clean, password }).catch(
+        () => undefined,
+      );
+    }
+    toast.success("Signed in.");
+    navigate({ to: "/dashboard", replace: true });
+  }
+
   async function submit() {
-    if (!form.email.trim() || form.password.length < 6) {
-      toast.error("Enter an email and a password of at least 6 characters.");
+    if (!form.username.trim() || form.password.length < MIN_PASSWORD_LENGTH) {
+      toast.error("Enter your username and a password of at least 8 characters.");
       return;
     }
     setBusy(true);
     try {
-      if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email: form.email.trim(),
-          password: form.password,
-          options: {
-            emailRedirectTo: window.location.origin + "/auth",
-            data: { full_name: form.fullName.trim(), phone: form.phone.trim() },
-          },
-        });
-        if (error) throw error;
-        if (!data.session) {
-          setPendingConfirm(true);
-          toast.success("Account created — check your email to confirm.");
-          return;
-        }
-        toast.success("Welcome to Aura Omni Store!");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: form.email.trim(),
-          password: form.password,
-        });
-        if (error) throw error;
-        toast.success("Signed in.");
-      }
-      navigate({ to: "/dashboard", replace: true });
+      await signIn(form.username, form.password, true);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not complete sign in.");
+      toast.error(error instanceof Error ? error.message : "Could not sign in.");
     } finally {
       setBusy(false);
     }
@@ -88,55 +86,22 @@ function AuthPage() {
 
       <div className="mx-auto mt-4 w-full max-w-md px-3">
         <div className="rounded-2xl bg-card p-4 card-shadow">
-          <h1 className="font-display text-lg font-bold">
-            {mode === "signin" ? "CEO Aura Vibe" : "Join Aura Omni Store"}
-          </h1>
+          <h1 className="font-display text-lg font-bold">CEO Aura Vibe</h1>
           <p className="mt-1 text-xs text-muted-foreground">
-            One account for customers and for the admin, sales, support and delivery dashboards.
+            Sign in with your username and password, or unlock instantly with fingerprint or face.
           </p>
 
-          {pendingConfirm ? (
-            <div className="mt-3 rounded-xl border border-success px-3 py-2 text-xs font-semibold text-success">
-              Confirmation email sent to {form.email}. Tap the link, then sign in.
-            </div>
-          ) : null}
-
           <div className="mt-4 space-y-3">
-            {mode === "signup" ? (
-              <>
-                <div className="space-y-1.5">
-                  <Label htmlFor="fullName">Full name</Label>
-                  <Input
-                    id="fullName"
-                    value={form.fullName}
-                    maxLength={80}
-                    onChange={(event) => setForm({ ...form, fullName: event.target.value })}
-                    placeholder="e.g. Zaheer Abbas"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    inputMode="tel"
-                    value={form.phone}
-                    maxLength={20}
-                    onChange={(event) => setForm({ ...form, phone: event.target.value })}
-                    placeholder="03XX XXXXXXX"
-                  />
-                </div>
-              </>
-            ) : null}
-
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Username</Label>
               <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={form.email}
-                onChange={(event) => setForm({ ...form, email: event.target.value })}
-                placeholder="you@example.com"
+                id="username"
+                autoComplete="username"
+                autoCapitalize="none"
+                value={form.username}
+                maxLength={32}
+                onChange={(event) => setForm({ ...form, username: event.target.value })}
+                placeholder="e.g. ceo"
               />
             </div>
 
@@ -145,10 +110,10 @@ function AuthPage() {
               <Input
                 id="password"
                 type="password"
-                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                autoComplete="current-password"
                 value={form.password}
                 onChange={(event) => setForm({ ...form, password: event.target.value })}
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters"
                 onKeyDown={(event) => {
                   if (event.key === "Enter") void submit();
                 }}
@@ -160,26 +125,28 @@ function AuthPage() {
               disabled={busy}
               onClick={() => void submit()}
             >
-              {busy ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : mode === "signin" ? (
-                <LogIn className="size-4" />
-              ) : (
-                <UserPlus className="size-4" />
-              )}
-              {mode === "signin" ? "Sign in" : "Create account"}
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <LogIn className="size-4" />}
+              Sign in
             </Button>
 
-            <button
-              type="button"
-              className="w-full text-center text-xs font-semibold text-primary"
-              onClick={() => {
-                setMode(mode === "signin" ? "signup" : "signin");
-                setPendingConfirm(false);
+            <BiometricLoginButton
+              scope="account"
+              username={normalizeUsername(form.username) || undefined}
+              label="Fingerprint"
+              onSuccess={async (result) => {
+                await signIn(result.username ?? form.username, result.password, false);
               }}
-            >
-              {mode === "signin" ? "New here? Create an account" : "Already have an account? Sign in"}
-            </button>
+            />
+
+            <BiometricLoginButton
+              scope="account"
+              username={normalizeUsername(form.username) || undefined}
+              label="Face unlock"
+              icon={<ScanFace className="size-4" />}
+              onSuccess={async (result) => {
+                await signIn(result.username ?? form.username, result.password, false);
+              }}
+            />
           </div>
         </div>
       </div>
