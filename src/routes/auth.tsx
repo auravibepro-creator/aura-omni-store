@@ -13,13 +13,13 @@ import { useAuth } from "@/lib/auth";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Aura Vibe Team & Customer Portal" },
+      { title: "Sign in — Aura Omni Store Team & Customer Portal" },
       {
         name: "description",
         content:
-          "Sign in to your Aura Vibe account to track orders, or access the admin, sales, support and delivery dashboards.",
+          "Sign in to your Aura Omni Store account to track orders, or access the admin, sales, support and delivery dashboards.",
       },
-      { property: "og:title", content: "Sign in — Aura Vibe Portal" },
+      { property: "og:title", content: "Sign in — Aura Omni Store Portal" },
       {
         property: "og:description",
         content: "One login for customers, admins, sales agents, support agents and delivery riders.",
@@ -65,7 +65,7 @@ function AuthPage() {
           toast.success("Account created — check your email to confirm.");
           return;
         }
-        toast.success("Welcome to Aura Vibe!");
+        toast.success("Welcome to Aura Omni Store!");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: form.email.trim(),
@@ -89,7 +89,7 @@ function AuthPage() {
       <div className="mx-auto mt-4 w-full max-w-md px-3">
         <div className="rounded-2xl bg-card p-4 card-shadow">
           <h1 className="font-display text-lg font-bold">
-            {mode === "signin" ? "Welcome back" : "Join Aura Vibe"}
+            {mode === "signin" ? "Welcome back" : "Join Aura Omni Store"}
           </h1>
           <p className="mt-1 text-xs text-muted-foreground">
             One account for customers and for the admin, sales, support and delivery dashboards.

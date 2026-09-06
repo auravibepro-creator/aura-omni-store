@@ -13,7 +13,7 @@ export type Branding = {
 };
 
 export const DEFAULT_BRANDING: Branding = {
-  app_name: "Aura Vibe",
+  app_name: "Aura Omni Store",
   tagline: "Beauty & personal care, delivered",
   logo_url: "",
   primary: "#7c2fb4",

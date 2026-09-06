@@ -36,11 +36,11 @@ import {
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Store admin — Aura Vibe" },
-      { name: "description", content: "Manage Aura Vibe products, categories, prices and announcements." },
+      { title: "Store admin — Aura Omni Store" },
+      { name: "description", content: "Manage Aura Omni Store products, categories, prices and announcements." },
       { name: "robots", content: "noindex" },
-      { property: "og:title", content: "Store admin — Aura Vibe" },
-      { property: "og:description", content: "Private dashboard for managing the Aura Vibe store." },
+      { property: "og:title", content: "Store admin — Aura Omni Store" },
+      { property: "og:description", content: "Private dashboard for managing the Aura Omni Store store." },
     ],
   }),
   component: AdminPage,

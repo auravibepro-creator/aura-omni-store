@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { hashPassword } from "@/lib/hash";
 
-const RP_NAME = "Aura Vibe";
+const RP_NAME = "Aura Omni Store";
 
 const scopeShape = z.enum(["admin", "vendor"]);
 
@@ -123,7 +123,7 @@ export const webauthnRegisterBegin = createServerFn({ method: "POST" })
       rpID,
       userID: isoBase64URL.toBuffer(isoBase64URL.fromUTF8String(`${data.scope}:${accountName}`)),
       userName: accountName,
-      userDisplayName: data.scope === "admin" ? "Aura Vibe admin" : accountName,
+      userDisplayName: data.scope === "admin" ? "Aura Omni Store admin" : accountName,
       attestationType: "none",
       excludeCredentials: (existing ?? []).map((row) => ({ id: row.credential_id })),
       authenticatorSelection: {

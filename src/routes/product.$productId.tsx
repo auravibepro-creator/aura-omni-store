@@ -13,12 +13,12 @@ import { useAdminMode } from "@/lib/admin-mode";
 export const Route = createFileRoute("/product/$productId")({
   head: () => ({
     meta: [
-      { title: "Product details — Aura Vibe" },
+      { title: "Product details — Aura Omni Store" },
       { name: "description", content: "See photos, video demo, variants and PKR pricing before you order." },
-      { property: "og:title", content: "Product details — Aura Vibe" },
+      { property: "og:title", content: "Product details — Aura Omni Store" },
       {
         property: "og:description",
-        content: "Photos, video demo, variants and PKR pricing on Aura Vibe.",
+        content: "Photos, video demo, variants and PKR pricing on Aura Omni Store.",
       },
     ],
   }),

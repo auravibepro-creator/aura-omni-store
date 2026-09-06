@@ -22,13 +22,13 @@ import {
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "My dashboard — Aura Vibe Retail Hub" },
+      { title: "My dashboard — Aura Omni Store Retail Hub" },
       {
         name: "description",
         content:
-          "Track your Aura Vibe orders, sales commission and delivery routes from one personal dashboard.",
+          "Track your Aura Omni Store orders, sales commission and delivery routes from one personal dashboard.",
       },
-      { property: "og:title", content: "My dashboard — Aura Vibe" },
+      { property: "og:title", content: "My dashboard — Aura Omni Store" },
       {
         property: "og:description",
         content: "Orders, earnings and delivery routes in one place for customers, sales agents and riders.",
