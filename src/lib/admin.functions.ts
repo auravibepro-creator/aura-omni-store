@@ -37,7 +37,7 @@ const categoryShape = z.object({
 
 async function assertPassword(password: string) {
   const { assertAdminPasswordValue } = await import("@/lib/admin-password.server");
-  assertAdminPasswordValue(password);
+  await assertAdminPasswordValue(password);
 }
 
 async function admin() {

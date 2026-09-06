@@ -44,7 +44,7 @@ function relyingParty() {
 
 async function assertAdminPassword(password: string) {
   const { assertAdminPasswordValue } = await import("@/lib/admin-password.server");
-  assertAdminPasswordValue(password);
+  await assertAdminPasswordValue(password);
 }
 
 async function assertVendorPassword(username: string, password: string) {
