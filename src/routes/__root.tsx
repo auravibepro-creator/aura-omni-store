@@ -85,13 +85,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Aura Vibe — Beauty & Personal Care Store" },
+      { title: "Aura Omni Store — Beauty & Personal Care Store" },
       {
         name: "description",
         content:
-          "Shop cosmetics, hair removal sprays, nail care and face masks at Aura Vibe. Cash on delivery across Pakistan.",
+          "Shop cosmetics, hair removal sprays, nail care and face masks at Aura Omni Store. Cash on delivery across Pakistan.",
       },
-      { property: "og:title", content: "Aura Vibe — Beauty & Personal Care Store" },
+      { property: "og:title", content: "Aura Omni Store — Beauty & Personal Care Store" },
       {
         property: "og:description",
         content: "Cosmetics, masks and personal care at flash-sale prices. Order on WhatsApp.",

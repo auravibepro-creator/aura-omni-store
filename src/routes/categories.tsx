@@ -13,13 +13,13 @@ import { fetchProducts } from "@/lib/shop";
 export const Route = createFileRoute("/categories")({
   head: () => ({
     meta: [
-      { title: "All Categories — Aura Vibe Online Store" },
+      { title: "All Categories — Aura Omni Store Online Store" },
       {
         name: "description",
         content:
-          "Browse every Aura Vibe category: beauty, home & kitchen, fashion, electronics, pets, groceries and more with cash on delivery in Pakistan.",
+          "Browse every Aura Omni Store category: beauty, home & kitchen, fashion, electronics, pets, groceries and more with cash on delivery in Pakistan.",
       },
-      { property: "og:title", content: "All Categories — Aura Vibe Online Store" },
+      { property: "og:title", content: "All Categories — Aura Omni Store Online Store" },
       {
         property: "og:description",
         content: "Explore 34 shopping categories with sub-categories and flash-sale prices.",

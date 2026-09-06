@@ -36,11 +36,11 @@ import {
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Store admin — Aura Vibe" },
-      { name: "description", content: "Manage Aura Vibe products, categories, prices and announcements." },
+      { title: "Store admin — Aura Omni Store" },
+      { name: "description", content: "Manage Aura Omni Store products, categories, prices and announcements." },
       { name: "robots", content: "noindex" },
-      { property: "og:title", content: "Store admin — Aura Vibe" },
-      { property: "og:description", content: "Private dashboard for managing the Aura Vibe store." },
+      { property: "og:title", content: "Store admin — Aura Omni Store" },
+      { property: "og:description", content: "Private dashboard for managing the Aura Omni Store store." },
     ],
   }),
   component: AdminPage,
@@ -173,12 +173,12 @@ function AdminPage() {
   if (!authed) {
     return (
       <div className="min-h-screen">
-        <ShopHeader title="Admin dashboard" showBack />
+        <ShopHeader title="CEO Aura Vibe" showBack />
         <div className="mx-3 mt-10 rounded-2xl bg-card p-6 card-shadow">
           <span className="mx-auto flex size-12 items-center justify-center rounded-full brand-gradient text-primary-foreground">
             <Lock className="size-6" />
           </span>
-          <h1 className="mt-3 text-center font-display text-lg font-bold">Store admin</h1>
+          <h1 className="mt-3 text-center font-display text-lg font-bold">CEO Aura Vibe</h1>
           <p className="mt-1 text-center text-xs text-muted-foreground">
             Enter the admin password to manage products.
           </p>

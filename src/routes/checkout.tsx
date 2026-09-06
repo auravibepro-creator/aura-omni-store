@@ -19,10 +19,10 @@ import { FREE_SHIPPING_THRESHOLD, WHATSAPP_NUMBER, formatPKR } from "@/lib/shop"
 export const Route = createFileRoute("/checkout")({
   head: () => ({
     meta: [
-      { title: "Checkout — Aura Vibe" },
+      { title: "Checkout — Aura Omni Store" },
       { name: "description", content: "Name, phone and address — then your order goes straight to WhatsApp." },
-      { property: "og:title", content: "Checkout — Aura Vibe" },
-      { property: "og:description", content: "Three fields and your Aura Vibe order is placed on WhatsApp." },
+      { property: "og:title", content: "Checkout — Aura Omni Store" },
+      { property: "og:description", content: "Three fields and your Aura Omni Store order is placed on WhatsApp." },
     ],
   }),
   component: CheckoutPage,

@@ -23,14 +23,14 @@ import {
 export const Route = createFileRoute("/vendor")({
   head: () => ({
     meta: [
-      { title: "Vendor portal — Aura Vibe" },
+      { title: "Vendor portal — Aura Omni Store" },
       {
         name: "description",
         content: "Vendor sign-in to manage products, photos, prices and stock for your category.",
       },
       { name: "robots", content: "noindex" },
-      { property: "og:title", content: "Vendor portal — Aura Vibe" },
-      { property: "og:description", content: "Manage your assigned Aura Vibe category." },
+      { property: "og:title", content: "Vendor portal — Aura Omni Store" },
+      { property: "og:description", content: "Manage your assigned Aura Omni Store category." },
     ],
   }),
   component: VendorPage,

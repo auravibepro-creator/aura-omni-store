@@ -12,10 +12,10 @@ import { FREE_SHIPPING_THRESHOLD, formatPKR } from "@/lib/shop";
 export const Route = createFileRoute("/cart")({
   head: () => ({
     meta: [
-      { title: "Your cart — Aura Vibe" },
+      { title: "Your cart — Aura Omni Store" },
       { name: "description", content: "Review your items, adjust quantities and check out on WhatsApp." },
-      { property: "og:title", content: "Your cart — Aura Vibe" },
-      { property: "og:description", content: "Review your Aura Vibe items and order on WhatsApp." },
+      { property: "og:title", content: "Your cart — Aura Omni Store" },
+      { property: "og:description", content: "Review your Aura Omni Store items and order on WhatsApp." },
     ],
   }),
   component: CartPage,

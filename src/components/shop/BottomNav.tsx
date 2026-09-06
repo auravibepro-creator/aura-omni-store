@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Home, LayoutGrid, ShoppingCart, Shield } from "lucide-react";
+import { Home, LayoutGrid, ShoppingCart, User } from "lucide-react";
 
 import { useCart } from "@/lib/cart";
 
@@ -34,9 +34,9 @@ export function BottomNav() {
           </span>
           Cart
         </Link>
-        <Link to="/admin" className={linkClass} activeProps={{ className: "text-primary" }}>
-          <Shield className="size-5" />
-          Admin
+        <Link to="/dashboard" className={linkClass} activeProps={{ className: "text-primary" }}>
+          <User className="size-5" />
+          Account
         </Link>
       </div>
     </nav>

@@ -17,13 +17,13 @@ import { fetchCategories, fetchProducts, fetchTabs } from "@/lib/shop";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Aura Vibe — Beauty, Skincare & Personal Care Deals" },
+      { title: "Aura Omni Store — Beauty, Skincare & Personal Care Deals" },
       {
         name: "description",
         content:
           "Flash deals on cosmetics, hair removal sprays, nail polish thinner, face masks and personal care. Order in seconds on WhatsApp.",
       },
-      { property: "og:title", content: "Aura Vibe — Beauty, Skincare & Personal Care Deals" },
+      { property: "og:title", content: "Aura Omni Store — Beauty, Skincare & Personal Care Deals" },
       {
         property: "og:description",
         content: "Flash deals on cosmetics, masks and personal care. Cash on delivery in Pakistan.",

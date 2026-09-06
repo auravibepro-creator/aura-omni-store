@@ -30,7 +30,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
     root.style.setProperty("--font-sans", FONT_STACKS[branding.font_family]);
     root.style.fontSize = `${Math.round(16 * branding.font_scale)}px`;
     root.style.setProperty("zoom", String(branding.zoom));
-    if (branding.app_name) document.title = document.title.replace(/Aura Vibe/g, branding.app_name);
+    if (branding.app_name) document.title = document.title.replace(/Aura Omni Store/g, branding.app_name);
   }, [branding]);
 
   return <BrandingContext.Provider value={branding}>{children}</BrandingContext.Provider>;
