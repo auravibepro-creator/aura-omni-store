@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { adminCreateStaff, adminUpdateSelf } from "@/lib/accounts.functions";
+import { MIN_PASSWORD_LENGTH, normalizeUsername } from "@/lib/account";
 import {
   adminAssignOrder,
   adminListStaff,
@@ -114,6 +116,9 @@ export function UsersPanel({ password }: { password: string }) {
           <Stat label="Riders" value={String(riders.length)} />
         </div>
       </section>
+
+      <AdminSelfCard password={password} />
+      <CreateStaffCard password={password} onCreated={refresh} />
 
       <section className="space-y-2 rounded-2xl bg-card p-4 card-shadow">
         <p className="text-sm font-semibold">Staff accounts</p>
@@ -327,5 +332,227 @@ function Stat({ label, value }: { label: string; value: string }) {
       <p className="text-[10px] text-muted-foreground">{label}</p>
       <p className="text-sm font-bold">{value}</p>
     </div>
+  );
+}
+
+
+/** Admin's own display name and password. */
+function AdminSelfCard({ password }: { password: string }) {
+  const [fullName, setFullName] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <section className="space-y-2 rounded-2xl bg-card p-4 card-shadow">
+      <p className="text-sm font-semibold">My admin profile</p>
+      <p className="text-[11px] text-muted-foreground">
+        Change the CEO display name or set a new password (at least 8 characters). The username
+        stays <span className="font-semibold">ceo</span>.
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label htmlFor="admin-name">Display name</Label>
+          <Input
+            id="admin-name"
+            value={fullName}
+            maxLength={80}
+            placeholder="CEO Aura Vibe"
+            onChange={(event) => setFullName(event.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="admin-pass">New password</Label>
+          <Input
+            id="admin-pass"
+            type="password"
+            value={newPassword}
+            placeholder="At least 8 characters"
+            onChange={(event) => setNewPassword(event.target.value)}
+          />
+        </div>
+      </div>
+      <Button
+        size="sm"
+        disabled={busy || (!fullName.trim() && !newPassword)}
+        onClick={async () => {
+          if (newPassword && newPassword.length < MIN_PASSWORD_LENGTH) {
+            toast.error("Use at least 8 characters for the password.");
+            return;
+          }
+          setBusy(true);
+          try {
+            await adminUpdateSelf({
+              data: {
+                password,
+                ...(fullName.trim() ? { full_name: fullName.trim() } : {}),
+                ...(newPassword ? { new_password: newPassword } : {}),
+              },
+            });
+            toast.success(
+              newPassword ? "Saved — use the new password from now on." : "Name updated.",
+            );
+            setNewPassword("");
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Could not save");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        Save my details
+      </Button>
+    </section>
+  );
+}
+
+/** Create a staff login with a temporary password. */
+function CreateStaffCard({
+  password,
+  onCreated,
+}: {
+  password: string;
+  onCreated: () => void | Promise<void>;
+}) {
+  const [form, setForm] = useState({
+    username: "",
+    full_name: "",
+    designation: "",
+    role: "sales" as AppRole,
+    temp_password: "",
+  });
+  const [busy, setBusy] = useState(false);
+  const [created, setCreated] = useState<{ username: string; temp: string } | null>(null);
+
+  return (
+    <section className="space-y-2 rounded-2xl bg-card p-4 card-shadow">
+      <p className="flex items-center gap-1.5 text-sm font-semibold">
+        <ShieldCheck className="size-4" /> New staff account
+      </p>
+      <p className="text-[11px] text-muted-foreground">
+        Give them a username and a temporary password. On their first sign-in they must complete
+        their details, set a permanent password and turn on fingerprint / face unlock.
+      </p>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label htmlFor="new-username">Username</Label>
+          <Input
+            id="new-username"
+            value={form.username}
+            maxLength={32}
+            placeholder="e.g. rider.ali"
+            onChange={(event) => setForm({ ...form, username: event.target.value })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="new-name">Name</Label>
+          <Input
+            id="new-name"
+            value={form.full_name}
+            maxLength={80}
+            placeholder="Full name"
+            onChange={(event) => setForm({ ...form, full_name: event.target.value })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="new-designation">Designation</Label>
+          <Input
+            id="new-designation"
+            value={form.designation}
+            maxLength={80}
+            placeholder="e.g. Delivery rider"
+            onChange={(event) => setForm({ ...form, designation: event.target.value })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="new-role">Role</Label>
+          <select
+            id="new-role"
+            className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+            value={form.role}
+            onChange={(event) => setForm({ ...form, role: event.target.value as AppRole })}
+          >
+            {MANAGED_ROLES.map((role) => (
+              <option key={role} value={role}>
+                {ROLE_LABELS[role]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <Label htmlFor="new-temp">Temporary password</Label>
+          <div className="flex gap-2">
+            <Input
+              id="new-temp"
+              value={form.temp_password}
+              placeholder="At least 8 characters"
+              onChange={(event) => setForm({ ...form, temp_password: event.target.value })}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setForm({
+                  ...form,
+                  temp_password: `Aura${Math.floor(1000 + Math.random() * 8999)}${Math.floor(
+                    10 + Math.random() * 89,
+                  )}`,
+                })
+              }
+            >
+              Generate
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <Button
+        size="sm"
+        disabled={busy}
+        onClick={async () => {
+          if (form.temp_password.length < MIN_PASSWORD_LENGTH) {
+            toast.error("The temporary password needs at least 8 characters.");
+            return;
+          }
+          setBusy(true);
+          try {
+            const result = await adminCreateStaff({
+              data: {
+                password,
+                username: normalizeUsername(form.username),
+                full_name: form.full_name.trim(),
+                designation: form.designation.trim(),
+                role: form.role,
+                temp_password: form.temp_password,
+              },
+            });
+            setCreated({ username: result.username, temp: form.temp_password });
+            toast.success("Staff account created");
+            setForm({
+              username: "",
+              full_name: "",
+              designation: "",
+              role: "sales",
+              temp_password: "",
+            });
+            await onCreated();
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Could not create the account");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        Create account
+      </Button>
+
+      {created ? (
+        <p className="rounded-xl bg-muted/60 px-3 py-2 text-[11px]">
+          Share these once: username <span className="font-semibold">{created.username}</span>,
+          temporary password <span className="font-semibold">{created.temp}</span>.
+        </p>
+      ) : null}
+    </section>
   );
 }
