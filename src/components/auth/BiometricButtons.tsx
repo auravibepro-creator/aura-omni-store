@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Fingerprint, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,12 +29,14 @@ export function BiometricLoginButton({
   username,
   disabled,
   label = "Quick sign-in (fingerprint)",
+  icon,
   onSuccess,
 }: {
   scope: Scope;
   username?: string | undefined;
   disabled?: boolean | undefined;
   label?: string | undefined;
+  icon?: ReactNode | undefined;
   onSuccess: (result: { password: string; username: string | null }) => void | Promise<void>;
 }) {
   const supported = useBiometricSupport();
@@ -73,7 +75,7 @@ export function BiometricLoginButton({
         }
       }}
     >
-      <Fingerprint className="size-4" />
+      {icon ?? <Fingerprint className="size-4" />}
       {busy ? "Verifying…" : label}
     </Button>
   );
