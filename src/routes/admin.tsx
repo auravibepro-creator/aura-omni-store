@@ -178,7 +178,7 @@ function AdminPage() {
           <span className="mx-auto flex size-12 items-center justify-center rounded-full brand-gradient text-primary-foreground">
             <Lock className="size-6" />
           </span>
-          <h1 className="mt-3 text-center font-display text-lg font-bold">CEO Aura Vibe</h1>
+          <h1 className="mt-3 truncate text-center font-display text-lg font-bold">Admin access</h1>
           <p className="mt-1 text-center text-xs text-muted-foreground">
             Enter the admin password to manage products.
           </p>
