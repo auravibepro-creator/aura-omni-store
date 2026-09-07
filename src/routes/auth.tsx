@@ -84,11 +84,11 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen pb-16">
-      <ShopHeader title="CEO Aura Vibe" showBack />
+      <ShopHeader title="Sign in" showBack />
 
       <div className="mx-auto mt-4 w-full max-w-md px-3">
         <div className="rounded-2xl bg-card p-4 card-shadow">
-          <h1 className="font-display text-lg font-bold">CEO Aura Vibe</h1>
+          <h1 className="truncate font-display text-lg font-bold">{branding.app_name}</h1>
           <p className="mt-1 text-xs text-muted-foreground">
             Sign in with your username and password, or unlock instantly with fingerprint or face.
           </p>
