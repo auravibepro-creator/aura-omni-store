@@ -18,20 +18,24 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-      - name: Merge aura-direct-shop
+      - name: Pull and Force Merge aura-direct-shop
         run: |
-          git reset --hard HEAD
           git remote add direct-shop https://${{ secrets.GITHUB_TOKEN }}@github.com/auravibepro-creator/aura-direct-shop.git
           git fetch direct-shop
-          git merge direct-shop/main --allow-unrelated-histories -X ours -m "Merge aura-direct-shop" || git merge direct-shop/master --allow-unrelated-histories -X ours -m "Merge aura-direct-shop"
+          git merge direct-shop/main --allow-unrelated-histories -s ours -m "Merge aura-direct-shop safely" || git merge direct-shop/master --allow-unrelated-histories -s ours -m "Merge aura-direct-shop safely" || true
+          git checkout direct-shop/main -- . 2>/dev/null || git checkout direct-shop/master -- . 2>/dev/null || true
+          git checkout HEAD -- . || true
 
-      - name: Merge source-sync-build
+      - name: Pull and Force Merge source-sync-build
         run: |
-          git reset --hard HEAD
           git remote add sync-build https://${{ secrets.GITHUB_TOKEN }}@github.com/auravibepro-creator/source-sync-build.git
           git fetch sync-build
-          git merge sync-build/main --allow-unrelated-histories -X ours -m "Merge source-sync-build" || git merge sync-build/master --allow-unrelated-histories -X ours -m "Merge source-sync-build"
+          git merge sync-build/main --allow-unrelated-histories -s ours -m "Merge source-sync-build safely" || git merge sync-build/master --allow-unrelated-histories -s ours -m "Merge source-sync-build safely" || true
+          git checkout sync-build/main -- . 2>/dev/null || git checkout sync-build/master -- . 2>/dev/null || true
+          git checkout HEAD -- . || true
 
       - name: Push Merged Code to Main Repo
         run: |
-          git push origin main || git push origin master
+          git add -A
+          git commit -m "Auto-synced repositories with omni priority" || true
+          git push origin main --force || git push origin master --force
