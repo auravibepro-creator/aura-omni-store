@@ -20,12 +20,14 @@ jobs:
 
       - name: Merge aura-direct-shop
         run: |
+          git reset --hard HEAD
           git remote add direct-shop https://${{ secrets.GITHUB_TOKEN }}@github.com/auravibepro-creator/aura-direct-shop.git
           git fetch direct-shop
           git merge direct-shop/main --allow-unrelated-histories -X ours -m "Merge aura-direct-shop" || git merge direct-shop/master --allow-unrelated-histories -X ours -m "Merge aura-direct-shop"
 
       - name: Merge source-sync-build
         run: |
+          git reset --hard HEAD
           git remote add sync-build https://${{ secrets.GITHUB_TOKEN }}@github.com/auravibepro-creator/source-sync-build.git
           git fetch sync-build
           git merge sync-build/main --allow-unrelated-histories -X ours -m "Merge source-sync-build" || git merge sync-build/master --allow-unrelated-histories -X ours -m "Merge source-sync-build"
