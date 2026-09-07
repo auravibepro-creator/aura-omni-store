@@ -37,9 +37,10 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const branding = useBranding();
   const { session, loading } = useAuth();
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({ username: "", password: "" });
+  const [form, setForm] = useState({ username: CEO_USERNAME, password: "" });
 
   useEffect(() => {
     void ensureCeoAccount().catch(() => undefined);
