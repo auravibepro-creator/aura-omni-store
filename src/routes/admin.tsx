@@ -173,7 +173,7 @@ function AdminPage() {
   if (!authed) {
     return (
       <div className="min-h-screen">
-        <ShopHeader title="CEO Aura Vibe" showBack />
+        <ShopHeader title="Admin" showBack />
         <div className="mx-3 mt-10 rounded-2xl bg-card p-6 card-shadow">
           <span className="mx-auto flex size-12 items-center justify-center rounded-full brand-gradient text-primary-foreground">
             <Lock className="size-6" />
