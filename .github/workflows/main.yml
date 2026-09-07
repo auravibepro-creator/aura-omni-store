@@ -18,24 +18,29 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-      - name: Pull and Force Merge aura-direct-shop
+      - name: Force Keep Omni Priority for direct-shop
         run: |
           git remote add direct-shop https://${{ secrets.GITHUB_TOKEN }}@github.com/auravibepro-creator/aura-direct-shop.git
           git fetch direct-shop
-          git merge direct-shop/main --allow-unrelated-histories -s ours -m "Merge aura-direct-shop safely" || git merge direct-shop/master --allow-unrelated-histories -s ours -m "Merge aura-direct-shop safely" || true
-          git checkout direct-shop/main -- . 2>/dev/null || git checkout direct-shop/master -- . 2>/dev/null || true
-          git checkout HEAD -- . || true
+          # ہم دوسری ریپوزٹری کی برانچ کو عارضی طور پر الگ فولڈر میں نکالتے ہیں
+          git checkout -b temp-direct direct-shop/main || git checkout -b temp-direct direct-shop/master || true
+          # واپس اپنی مین برانچ پر آتے ہیں
+          git checkout main || git checkout master || true
+          # صرف وہی فائلیں کاپی ہوں گی جو اومنی میں نہیں ہیں، ٹکرانے والی فائلیں اومنی کی ہی رہیں گی
+          rsync -av --ignore-existing temp-direct/ ./ || true
+          git branch -D temp-direct || true
 
-      - name: Pull and Force Merge source-sync-build
+      - name: Force Keep Omni Priority for source-sync-build
         run: |
           git remote add sync-build https://${{ secrets.GITHUB_TOKEN }}@github.com/auravibepro-creator/source-sync-build.git
           git fetch sync-build
-          git merge sync-build/main --allow-unrelated-histories -s ours -m "Merge source-sync-build safely" || git merge sync-build/master --allow-unrelated-histories -s ours -m "Merge source-sync-build safely" || true
-          git checkout sync-build/main -- . 2>/dev/null || git checkout sync-build/master -- . 2>/dev/null || true
-          git checkout HEAD -- . || true
+          git checkout -b temp-sync sync-build/main || git checkout -b temp-sync sync-build/master || true
+          git checkout main || git checkout master || true
+          rsync -av --ignore-existing temp-sync/ ./ || true
+          git branch -D temp-sync || true
 
-      - name: Push Merged Code to Main Repo
+      - name: Push Clean Code to Main Repo
         run: |
           git add -A
-          git commit -m "Auto-synced repositories with omni priority" || true
+          git commit -m "Auto-synced with strict omni store priority" || true
           git push origin main --force || git push origin master --force
