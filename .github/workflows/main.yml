@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Main Repo (aura-omni-store)
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
@@ -20,13 +20,13 @@ jobs:
 
       - name: Merge aura-direct-shop
         run: |
-          git remote add direct-shop https://github.com/auravibepro-creator/aura-direct-shop.git
+          git remote add direct-shop https://${{ secrets.GITHUB_TOKEN }}@github.com/auravibepro-creator/aura-direct-shop.git
           git fetch direct-shop
           git merge direct-shop/main --allow-unrelated-histories -m "Merge aura-direct-shop" || git merge direct-shop/master --allow-unrelated-histories -m "Merge aura-direct-shop"
 
       - name: Merge source-sync-build
         run: |
-          git remote add sync-build https://github.com/auravibepro-creator/source-sync-build.git
+          git remote add sync-build https://${{ secrets.GITHUB_TOKEN }}@github.com/auravibepro-creator/source-sync-build.git
           git fetch sync-build
           git merge sync-build/main --allow-unrelated-histories -m "Merge source-sync-build" || git merge sync-build/master --allow-unrelated-histories -m "Merge source-sync-build"
 
