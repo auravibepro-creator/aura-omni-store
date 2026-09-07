@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { MIN_PASSWORD_LENGTH, normalizeUsername, usernameToEmail } from "@/lib/account";
+import { CEO_USERNAME, MIN_PASSWORD_LENGTH, normalizeUsername, usernameToEmail } from "@/lib/account";
 import { ensureCeoAccount } from "@/lib/accounts.functions";
 import { useAuth } from "@/lib/auth";
+import { useBranding } from "@/lib/branding-provider";
 import { ensureDeviceToken } from "@/lib/webauthn-client";
 
 export const Route = createFileRoute("/auth")({
@@ -37,9 +38,10 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const branding = useBranding();
   const { session, loading } = useAuth();
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({ username: "", password: "" });
+  const [form, setForm] = useState({ username: CEO_USERNAME, password: "" });
 
   useEffect(() => {
     void ensureCeoAccount().catch(() => undefined);
@@ -82,11 +84,11 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen pb-16">
-      <ShopHeader title="CEO Aura Vibe" showBack />
+      <ShopHeader title="Sign in" showBack />
 
       <div className="mx-auto mt-4 w-full max-w-md px-3">
         <div className="rounded-2xl bg-card p-4 card-shadow">
-          <h1 className="font-display text-lg font-bold">CEO Aura Vibe</h1>
+          <h1 className="truncate font-display text-lg font-bold">{branding.app_name}</h1>
           <p className="mt-1 text-xs text-muted-foreground">
             Sign in with your username and password, or unlock instantly with fingerprint or face.
           </p>
