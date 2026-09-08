@@ -111,13 +111,19 @@ function AdminPage() {
   const saveAnnouncement = useServerFn(adminSaveAnnouncement);
   const deleteAnnouncement = useServerFn(adminDeleteAnnouncement);
 
+  const sessionKey = useServerFn(adminSessionKey);
+  const { loading: authLoading, session, hasRole } = useAuth();
+
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const [products, setProducts] = useState<ProductRow[]>([]);
-  const [categories, setCategories] = useState<CategoryRow[]>([]);
-  const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
+  const cached = readCache<CatalogCache>(CACHE_KEY);
+  const [products, setProducts] = useState<ProductRow[]>(cached?.products ?? []);
+  const [categories, setCategories] = useState<CategoryRow[]>(cached?.categories ?? []);
+  const [announcements, setAnnouncements] = useState<AnnouncementRow[]>(
+    cached?.announcements ?? [],
+  );
 
   const [productForm, setProductForm] = useState<ProductForm | null>(null);
   const [categoryForm, setCategoryForm] = useState<Partial<CategoryRow> | null>(null);
@@ -128,32 +134,45 @@ function AdminPage() {
     setProducts(data.products as ProductRow[]);
     setCategories(data.categories as CategoryRow[]);
     setAnnouncements(data.announcements as AnnouncementRow[]);
+    writeCache<CatalogCache>(CACHE_KEY, {
+      products: data.products as ProductRow[],
+      categories: data.categories as CategoryRow[],
+      announcements: data.announcements as AnnouncementRow[],
+    });
   };
 
-  const signIn = async (pw: string) => {
-    setBusy(true);
-    try {
-      await login({ data: { password: pw } });
-      await refresh(pw);
-      setAuthed(true);
-      window.sessionStorage.setItem(STORAGE_KEY, pw);
-      void ensureDeviceToken({ scope: "admin", password: pw });
-    } catch {
-      window.sessionStorage.removeItem(STORAGE_KEY);
-      toast.error("Incorrect admin password");
-    } finally {
-      setBusy(false);
-    }
+  const unlock = async (pw: string) => {
+    await login({ data: { password: pw } });
+    setPassword(pw);
+    setAuthed(true);
+    window.sessionStorage.setItem(STORAGE_KEY, pw);
+    void refresh(pw).catch(() => undefined);
   };
 
+  /** A signed-in administrator opens the control centre straight away. */
   useEffect(() => {
+    if (authLoading) return;
+    let active = true;
     const saved = window.sessionStorage.getItem(STORAGE_KEY);
     if (saved) {
-      setPassword(saved);
-      void signIn(saved);
+      void unlock(saved).catch(() => window.sessionStorage.removeItem(STORAGE_KEY));
+      return;
     }
+    if (session && hasRole("admin")) {
+      void (async () => {
+        try {
+          const { key } = await sessionKey({ data: undefined });
+          if (active) await unlock(key);
+        } catch {
+          /* fall through to the sign-in prompt */
+        }
+      })();
+    }
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authLoading, session?.user.id, hasRole("admin")]);
 
   const run = async (action: () => Promise<unknown>, message: string) => {
     setBusy(true);
