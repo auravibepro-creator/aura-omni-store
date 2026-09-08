@@ -73,6 +73,11 @@ type CategoryRow = {
   sort_order: number;
 };
 type AnnouncementRow = { id: string; message: string; is_active: boolean; sort_order: number };
+type CatalogCache = {
+  products: ProductRow[];
+  categories: CategoryRow[];
+  announcements: AnnouncementRow[];
+};
 
 type ProductForm = {
   id?: string;
