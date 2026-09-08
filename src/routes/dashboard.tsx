@@ -72,7 +72,7 @@ function DashboardPage() {
     if (!userId) return;
     let active = true;
     void (async () => {
-      setBusy(true);
+      setBusy((current) => current || orders.length === 0);
       try {
         const filter = hasRole("admin")
           ? {}
@@ -86,10 +86,14 @@ function DashboardPage() {
           supabase.from("staff_settings").select("base_salary,commission_percent,monthly_target").eq("user_id", userId).maybeSingle(),
         ]);
         if (!active) return;
+        const nextStaff = (settings.data as StaffSettings | null) ?? null;
         setOrders(rows);
-        setStaff((settings.data as StaffSettings | null) ?? null);
+        setStaff(nextStaff);
+        writeCache(DASH_CACHE_KEY, { orders: rows, staff: nextStaff });
       } catch (error) {
-        if (active) toast.error(error instanceof Error ? error.message : "Could not load your dashboard.");
+        if (active && orders.length === 0) {
+          toast.error(error instanceof Error ? error.message : "Could not load your dashboard.");
+        }
       } finally {
         if (active) setBusy(false);
       }
