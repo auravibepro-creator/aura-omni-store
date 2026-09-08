@@ -101,7 +101,7 @@ function DashboardPage() {
         const nextStaff = (settings.data as StaffSettings | null) ?? null;
         setOrders(rows);
         setStaff(nextStaff);
-        writeCache(DASH_CACHE_KEY, { orders: rows, staff: nextStaff });
+        writeCache(`${DASH_CACHE_KEY}:${userId}`, { orders: rows, staff: nextStaff });
       } catch (error) {
         if (active && orders.length === 0) {
           toast.error(error instanceof Error ? error.message : "Could not load your dashboard.");
