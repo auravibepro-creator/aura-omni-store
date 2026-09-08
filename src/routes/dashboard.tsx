@@ -47,15 +47,18 @@ type StaffSettings = {
   monthly_target: number;
 };
 
+const DASH_CACHE_KEY = "dashboard";
+
 const money = (value: number, currency = "PKR") =>
   `${currency === "PKR" ? "Rs. " : currency + " "}${Math.round(value).toLocaleString()}`;
 
 function DashboardPage() {
   const navigate = useNavigate();
   const { loading, session, profile, roles, hasRole, refresh } = useAuth();
-  const [orders, setOrders] = useState<OrderRow[]>([]);
-  const [staff, setStaff] = useState<StaffSettings | null>(null);
-  const [busy, setBusy] = useState(true);
+  const cached = readCache<{ orders: OrderRow[]; staff: StaffSettings | null }>(DASH_CACHE_KEY);
+  const [orders, setOrders] = useState<OrderRow[]>(cached?.orders ?? []);
+  const [staff, setStaff] = useState<StaffSettings | null>(cached?.staff ?? null);
+  const [busy, setBusy] = useState(!cached);
   const [here, setHere] = useState<GeoPoint | null>(null);
 
   const userId = session?.user.id;
