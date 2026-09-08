@@ -41,7 +41,7 @@ function AuthPage() {
   const branding = useBranding();
   const { session, loading } = useAuth();
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({ username: CEO_USERNAME, password: "" });
+  const [form, setForm] = useState({ username: "", password: "" });
 
   useEffect(() => {
     void ensureCeoAccount().catch(() => undefined);

@@ -28,6 +28,9 @@ export async function isAdminPassword(password: string): Promise<boolean> {
   const value = password.trim();
   if (!value) return false;
 
+  const { SESSION_KEY_PREFIX, isAdminSessionKey } = await import("@/lib/admin-session.server");
+  if (value.startsWith(SESSION_KEY_PREFIX)) return isAdminSessionKey(value);
+
   const hash = await storedHash();
   if (hash) return (await hashPassword(value)) === hash;
 
