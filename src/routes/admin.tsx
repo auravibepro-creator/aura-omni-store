@@ -48,6 +48,7 @@ export const Route = createFileRoute("/admin")({
 });
 
 const STORAGE_KEY = "auravibe-admin-pw";
+const CACHE_KEY = "admin-catalog";
 
 type ProductRow = {
   id: string;
