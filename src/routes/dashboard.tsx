@@ -56,13 +56,25 @@ const money = (value: number, currency = "PKR") =>
 function DashboardPage() {
   const navigate = useNavigate();
   const { loading, session, profile, roles, hasRole, refresh } = useAuth();
-  const cached = readCache<{ orders: OrderRow[]; staff: StaffSettings | null }>(DASH_CACHE_KEY);
-  const [orders, setOrders] = useState<OrderRow[]>(cached?.orders ?? []);
-  const [staff, setStaff] = useState<StaffSettings | null>(cached?.staff ?? null);
-  const [busy, setBusy] = useState(!cached);
+  const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [staff, setStaff] = useState<StaffSettings | null>(null);
+  const [busy, setBusy] = useState(true);
   const [here, setHere] = useState<GeoPoint | null>(null);
 
   const userId = session?.user.id;
+
+  /** Paint last-known data straight away, then refresh in the background. */
+  useEffect(() => {
+    if (!userId) return;
+    const cached = readCache<{ orders: OrderRow[]; staff: StaffSettings | null }>(
+      `${DASH_CACHE_KEY}:${userId}`,
+    );
+    if (cached) {
+      setOrders(cached.orders);
+      setStaff(cached.staff);
+      setBusy(false);
+    }
+  }, [userId]);
 
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/auth", replace: true });
