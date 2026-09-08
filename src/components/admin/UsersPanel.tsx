@@ -338,59 +338,38 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 /** Admin's own display name and password. */
 function AdminSelfCard({ password }: { password: string }) {
-  const [fullName, setFullName] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   return (
     <section className="space-y-2 rounded-2xl bg-card p-4 card-shadow">
-      <p className="text-sm font-semibold">My admin profile</p>
+      <p className="text-sm font-semibold">My admin password</p>
       <p className="text-[11px] text-muted-foreground">
-        Change the CEO display name or set a new password (at least 8 characters). The username
-        stays <span className="font-semibold">ceo</span>.
+        Set a new password (at least 8 characters). The username stays{" "}
+        <span className="font-semibold">ceo</span>.
       </p>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="space-y-1">
-          <Label htmlFor="admin-name">Display name</Label>
-          <Input
-            id="admin-name"
-            value={fullName}
-            maxLength={80}
-            placeholder="CEO Aura Vibe"
-            onChange={(event) => setFullName(event.target.value)}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="admin-pass">New password</Label>
-          <Input
-            id="admin-pass"
-            type="password"
-            value={newPassword}
-            placeholder="At least 8 characters"
-            onChange={(event) => setNewPassword(event.target.value)}
-          />
-        </div>
+      <div className="space-y-1">
+        <Label htmlFor="admin-pass">New password</Label>
+        <Input
+          id="admin-pass"
+          type="password"
+          value={newPassword}
+          placeholder="At least 8 characters"
+          onChange={(event) => setNewPassword(event.target.value)}
+        />
       </div>
       <Button
         size="sm"
-        disabled={busy || (!fullName.trim() && !newPassword)}
+        disabled={busy || !newPassword}
         onClick={async () => {
-          if (newPassword && newPassword.length < MIN_PASSWORD_LENGTH) {
+          if (newPassword.length < MIN_PASSWORD_LENGTH) {
             toast.error("Use at least 8 characters for the password.");
             return;
           }
           setBusy(true);
           try {
-            await adminUpdateSelf({
-              data: {
-                password,
-                ...(fullName.trim() ? { full_name: fullName.trim() } : {}),
-                ...(newPassword ? { new_password: newPassword } : {}),
-              },
-            });
-            toast.success(
-              newPassword ? "Saved — use the new password from now on." : "Name updated.",
-            );
+            await adminUpdateSelf({ data: { password, new_password: newPassword } });
+            toast.success("Saved — use the new password from now on.");
             setNewPassword("");
           } catch (error) {
             toast.error(error instanceof Error ? error.message : "Could not save");
@@ -399,7 +378,7 @@ function AdminSelfCard({ password }: { password: string }) {
           }
         }}
       >
-        Save my details
+        Save password
       </Button>
     </section>
   );

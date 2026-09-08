@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { CEO_USERNAME, MIN_PASSWORD_LENGTH, normalizeUsername, usernameToEmail } from "@/lib/account";
+import { MIN_PASSWORD_LENGTH, normalizeUsername, usernameToEmail } from "@/lib/account";
 import { ensureCeoAccount } from "@/lib/accounts.functions";
 import { useAuth } from "@/lib/auth";
 import { useBranding } from "@/lib/branding-provider";
@@ -41,7 +41,7 @@ function AuthPage() {
   const branding = useBranding();
   const { session, loading } = useAuth();
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({ username: CEO_USERNAME, password: "" });
+  const [form, setForm] = useState({ username: "", password: "" });
 
   useEffect(() => {
     void ensureCeoAccount().catch(() => undefined);

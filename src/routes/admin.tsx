@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -19,8 +19,9 @@ import { UsersPanel } from "@/components/admin/UsersPanel";
 import { BrandingPanel } from "@/components/admin/BrandingPanel";
 import { PaymentsPanel } from "@/components/admin/PaymentsPanel";
 import { SupportPanel } from "@/components/admin/SupportPanel";
-import { BiometricLoginButton } from "@/components/auth/BiometricButtons";
-import { ensureDeviceToken } from "@/lib/webauthn-client";
+import { adminSessionKey } from "@/lib/accounts.functions";
+import { useAuth } from "@/lib/auth";
+import { readCache, writeCache } from "@/lib/local-cache";
 import { formatPKR } from "@/lib/shop";
 import {
   adminDeleteAnnouncement,
@@ -47,6 +48,7 @@ export const Route = createFileRoute("/admin")({
 });
 
 const STORAGE_KEY = "auravibe-admin-pw";
+const CACHE_KEY = "admin-catalog";
 
 type ProductRow = {
   id: string;
@@ -71,6 +73,11 @@ type CategoryRow = {
   sort_order: number;
 };
 type AnnouncementRow = { id: string; message: string; is_active: boolean; sort_order: number };
+type CatalogCache = {
+  products: ProductRow[];
+  categories: CategoryRow[];
+  announcements: AnnouncementRow[];
+};
 
 type ProductForm = {
   id?: string;
@@ -111,13 +118,19 @@ function AdminPage() {
   const saveAnnouncement = useServerFn(adminSaveAnnouncement);
   const deleteAnnouncement = useServerFn(adminDeleteAnnouncement);
 
+  const sessionKey = useServerFn(adminSessionKey);
+  const { loading: authLoading, session, hasRole } = useAuth();
+
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const [products, setProducts] = useState<ProductRow[]>([]);
-  const [categories, setCategories] = useState<CategoryRow[]>([]);
-  const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
+  const cached = readCache<CatalogCache>(CACHE_KEY);
+  const [products, setProducts] = useState<ProductRow[]>(cached?.products ?? []);
+  const [categories, setCategories] = useState<CategoryRow[]>(cached?.categories ?? []);
+  const [announcements, setAnnouncements] = useState<AnnouncementRow[]>(
+    cached?.announcements ?? [],
+  );
 
   const [productForm, setProductForm] = useState<ProductForm | null>(null);
   const [categoryForm, setCategoryForm] = useState<Partial<CategoryRow> | null>(null);
@@ -128,32 +141,45 @@ function AdminPage() {
     setProducts(data.products as ProductRow[]);
     setCategories(data.categories as CategoryRow[]);
     setAnnouncements(data.announcements as AnnouncementRow[]);
+    writeCache<CatalogCache>(CACHE_KEY, {
+      products: data.products as ProductRow[],
+      categories: data.categories as CategoryRow[],
+      announcements: data.announcements as AnnouncementRow[],
+    });
   };
 
-  const signIn = async (pw: string) => {
-    setBusy(true);
-    try {
-      await login({ data: { password: pw } });
-      await refresh(pw);
-      setAuthed(true);
-      window.sessionStorage.setItem(STORAGE_KEY, pw);
-      void ensureDeviceToken({ scope: "admin", password: pw });
-    } catch {
-      window.sessionStorage.removeItem(STORAGE_KEY);
-      toast.error("Incorrect admin password");
-    } finally {
-      setBusy(false);
-    }
+  const unlock = async (pw: string) => {
+    await login({ data: { password: pw } });
+    setPassword(pw);
+    setAuthed(true);
+    window.sessionStorage.setItem(STORAGE_KEY, pw);
+    void refresh(pw).catch(() => undefined);
   };
 
+  /** A signed-in administrator opens the control centre straight away. */
   useEffect(() => {
+    if (authLoading) return;
+    let active = true;
     const saved = window.sessionStorage.getItem(STORAGE_KEY);
     if (saved) {
-      setPassword(saved);
-      void signIn(saved);
+      void unlock(saved).catch(() => window.sessionStorage.removeItem(STORAGE_KEY));
+      return;
     }
+    if (session && hasRole("admin")) {
+      void (async () => {
+        try {
+          const { key } = await sessionKey({ data: undefined });
+          if (active) await unlock(key);
+        } catch {
+          /* fall through to the sign-in prompt */
+        }
+      })();
+    }
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authLoading, session?.user.id, hasRole("admin")]);
 
   const run = async (action: () => Promise<unknown>, message: string) => {
     setBusy(true);
@@ -173,51 +199,24 @@ function AdminPage() {
   if (!authed) {
     return (
       <div className="min-h-screen">
-        <ShopHeader title="Admin" showBack />
-        <div className="mx-3 mt-10 rounded-2xl bg-card p-6 card-shadow">
+        <ShopHeader title="Admin Control Centre" showBack />
+        <div className="mx-3 mt-10 rounded-2xl bg-card p-6 text-center card-shadow">
           <span className="mx-auto flex size-12 items-center justify-center rounded-full brand-gradient text-primary-foreground">
             <Lock className="size-6" />
           </span>
-          <h1 className="mt-3 truncate text-center font-display text-lg font-bold">Admin access</h1>
-          <p className="mt-1 text-center text-xs text-muted-foreground">
-            Enter the admin password to manage products.
+          <p className="mt-3 text-sm font-semibold">
+            {authLoading ? "Opening your control centre…" : "Sign in to continue"}
           </p>
-          <form
-            className="mt-5 space-y-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void signIn(password);
-            }}
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="pw">Password</Label>
-              <Input
-                id="pw"
-                type="password"
-                value={password}
-                maxLength={200}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="••••••••"
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={busy || password.length === 0}
-              className="w-full brand-gradient text-primary-foreground"
-            >
-              {busy ? "Checking…" : "Unlock dashboard"}
-            </Button>
-          </form>
-          <div className="mt-3">
-            <BiometricLoginButton
-              scope="admin"
-              disabled={busy}
-              onSuccess={async (result) => {
-                setPassword(result.password);
-                await signIn(result.password);
-              }}
-            />
-          </div>
+          {!authLoading ? (
+            <>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Use your account sign-in — no separate admin password needed.
+              </p>
+              <Button asChild className="mt-4 w-full brand-gradient text-primary-foreground">
+                <Link to="/auth">Go to sign in</Link>
+              </Button>
+            </>
+          ) : null}
         </div>
       </div>
     );
@@ -225,7 +224,7 @@ function AdminPage() {
 
   return (
     <div className="min-h-screen pb-16">
-      <ShopHeader title="Admin dashboard" showBack />
+      <ShopHeader title="Admin Control Centre" showBack />
 
       <div className="flex items-center gap-2 px-3 pt-3">
         <Button size="sm" variant="outline" disabled={busy} onClick={() => void refresh(password)}>

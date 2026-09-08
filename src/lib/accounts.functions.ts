@@ -67,6 +67,26 @@ export const ensureCeoAccount = createServerFn({ method: "POST" }).handler(async
   return { created: true as const, username: CEO_USERNAME };
 });
 
+/**
+ * A signed-in administrator exchanges their session for an admin key, so the
+ * dashboard never asks for the admin password a second time.
+ */
+export const adminSessionKey = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const client = await db();
+    const { data: role } = await client
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!role) throw new Error("Administrator access only");
+
+    const { issueAdminSessionKey } = await import("@/lib/admin-session.server");
+    return { key: await issueAdminSessionKey(context.userId) };
+  });
+
 /** Admin updates their own display name and/or password. */
 export const adminUpdateSelf = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
