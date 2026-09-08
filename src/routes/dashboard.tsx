@@ -8,6 +8,7 @@ import { ShopHeader } from "@/components/shop/ShopHeader";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { ROLE_LABELS, primaryRole, useAuth, type AppRole } from "@/lib/auth";
+import { readCache, writeCache } from "@/lib/local-cache";
 import {
   ORDER_STATUSES,
   captureLocation,
